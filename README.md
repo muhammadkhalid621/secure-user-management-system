@@ -19,13 +19,13 @@ Initial repository setup for the assignment. This level includes only project st
 ├── frontend
 ├── docker-compose.yml
 ├── package.json
-└── pnpm-workspace.yaml
+└── README.md
 ```
 
 ## Prerequisites
 
 - Node.js 20+
-- pnpm 9+
+- npm 10+
 - Docker Desktop
 
 ## Setup
@@ -33,13 +33,13 @@ Initial repository setup for the assignment. This level includes only project st
 1. Install dependencies:
 
 ```bash
-pnpm install
+npm install
 ```
 
 2. Start PostgreSQL and Redis:
 
 ```bash
-pnpm docker:up
+npm run docker:up
 ```
 
 3. Create environment files:
@@ -52,7 +52,7 @@ cp frontend/.env.local.example frontend/.env.local
 4. Start the frontend and backend:
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 ## App Ports
