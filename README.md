@@ -1,17 +1,50 @@
 # Mini Secure User Management System
 
-Initial repository setup for the assignment. This level includes only project structure, local environment configuration, and service bootstrapping for the frontend and backend.
+Production-style assignment project with a secure Express backend and a Next.js admin frontend in a single repository.
 
-## Proposed Stack
+## Stack
 
-- Frontend: Next.js + TypeScript
-- Backend: Express + TypeScript
-- Database: MySQL + Sequelize
-- Realtime / caching path: Redis + Bull queue + WebSocket support in backend
-- Repository layout: single repo with separate `frontend` and `backend` projects
-- Local infra: Docker Compose
+- Frontend: Next.js 15, TypeScript, Redux Toolkit, Tailwind CSS
+- Backend: Express, TypeScript, Sequelize, MySQL
+- Realtime: Socket.IO
+- Queue + cache + rate limiting: Redis, BullMQ
+- Docs: Swagger
+- Testing: Vitest, Testing Library, Playwright
 
-## Structure
+## Features
+
+### Mandatory
+
+- JWT authentication with access token and refresh token
+- Register, login, refresh, logout, and profile endpoints
+- Password hashing
+- User CRUD
+- Dynamic roles and permissions
+- Permission middleware and protected routes
+- Real-time notifications for:
+  - successful login
+  - user created
+  - user updated
+  - user deleted
+- Logging and audit trail
+- API rate limiting
+- Validation, centralized error handling, and env-based configuration
+
+### Bonus
+
+- MySQL + Sequelize migrations and seeders
+- Redis-backed refresh token persistence / blacklist
+- Redis-backed cache helpers
+- BullMQ queue processing
+- Swagger docs
+- Unit and route tests for backend
+- Frontend unit/integration tests
+- Playwright e2e setup
+- WebSocket auth with JWT
+- Pagination, search, sorting, and filtering
+- Audit logs collection/table and admin UI
+
+## Repository Structure
 
 ```text
 .
@@ -28,63 +61,178 @@ Initial repository setup for the assignment. This level includes only project st
 - npm 10+
 - Docker Desktop
 
-## Setup
+## Environment Files
 
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Start MySQL and Redis:
-
-```bash
-npm run docker:up
-```
-
-3. Create environment files:
+Create local env files first:
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.local.example frontend/.env.local
 ```
 
-4. Start the frontend and backend:
+Main backend env values are already documented in [backend/.env.example](/Applications/MAMP/htdocs/Muhammed-Khalid/test/backend/.env.example).
+
+Main frontend env values are in [frontend/.env.local.example](/Applications/MAMP/htdocs/Muhammed-Khalid/test/frontend/.env.local.example).
+
+## Setup
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start MySQL and Redis:
+
+```bash
+npm run docker:up
+```
+
+Run migrations and seeders:
+
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+Start frontend and backend:
 
 ```bash
 npm run dev
 ```
 
-5. Run backend migrations and seed the admin user:
+Run individually if needed:
 
 ```bash
-npm run db:migrate --workspace backend
-npm run db:seed --workspace backend
+npm run dev:backend
+npm run dev:frontend
 ```
 
-## App Ports
+## Local URLs
 
 - Frontend: `http://localhost:3000`
-- Backend: `http://localhost:4000`
-- MySQL: `localhost:3306`
-- Redis: `localhost:6379`
+- Backend API: `http://localhost:4000/api`
+- Swagger: `http://localhost:4000/docs`
+- Swagger JSON: `http://localhost:4000/docs.json`
+- MySQL: `127.0.0.1:3306`
+- Redis: `127.0.0.1:6379`
 
-## Current Scope
+## Seeded Admin
 
-This setup currently includes:
+After running seeders, the default admin account is:
 
-- Single-repo frontend/backend separation
-- Frontend and backend app skeletons
-- Example environment files for API, MySQL, Redis, and Bull queue
-- Docker services for MySQL and Redis
-- Sequelize config, migrations, and seeders
-- Base TypeScript configuration and starter entrypoints
+- Email: `admin@example.com`
+- Password: `Admin123!`
 
-The assignment features will be implemented in later levels:
+## Root Scripts
 
-- JWT auth + refresh tokens
-- Role-based user CRUD
-- WebSocket notifications
-- Logging
-- Rate limiting
-- Bonus items like Swagger, tests, blacklist, audit logs, CI, and frontend integration
+- `npm run dev`
+- `npm run dev:backend`
+- `npm run dev:frontend`
+- `npm run build`
+- `npm run lint`
+- `npm run docker:up`
+- `npm run docker:down`
+- `npm run db:migrate`
+- `npm run db:migrate:undo`
+- `npm run db:seed`
+- `npm run db:seed:undo`
+
+## Backend Scripts
+
+From root:
+
+```bash
+npm run lint --workspace backend
+npm run test --workspace backend
+npm run build --workspace backend
+```
+
+## Frontend Scripts
+
+From root:
+
+```bash
+npm run lint --workspace frontend
+npm run test --workspace frontend
+npm run build --workspace frontend
+npm run test:e2e --workspace frontend
+```
+
+Playwright note:
+
+```bash
+npx playwright install
+```
+
+Run that once before `npm run test:e2e --workspace frontend`, otherwise browser binaries will be missing.
+
+## API Surface
+
+### Auth
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `POST /api/auth/logout`
+- `GET /api/auth/profile`
+
+### Users
+
+- `POST /api/users`
+- `GET /api/users`
+- `GET /api/users/:id`
+- `PUT /api/users/:id`
+- `DELETE /api/users/:id`
+
+### Roles
+
+- `POST /api/roles`
+- `GET /api/roles`
+- `GET /api/roles/:id`
+- `PUT /api/roles/:id`
+- `DELETE /api/roles/:id`
+- `GET /api/roles/permissions/catalog`
+
+### Audit Logs
+
+- `GET /api/audit-logs`
+
+### Health / Docs
+
+- `GET /api/health`
+- `GET /docs`
+- `GET /docs.json`
+
+## Frontend Modules
+
+- Auth pages: login and register
+- Protected dashboard shell
+- Users management
+- Roles management
+- Audit logs view
+- Profile page with self-update flow
+- Realtime notification center with history
+- Shared table, filters, pagination, dialogs, skeletons, and toasts
+
+## Testing Status
+
+Verified locally in this repository:
+
+- `npm run lint --workspace backend`
+- `npm run test --workspace backend`
+- `npm run lint --workspace frontend`
+- `npm run test --workspace frontend`
+- `npm run build --workspace frontend`
+
+Playwright e2e configuration is added, but browser binaries must be installed locally before execution.
+
+## Submission Notes
+
+This repository is structured to demonstrate:
+
+- secure backend design
+- modular architecture
+- permission-driven UI and API behavior
+- realtime event handling
+- production-style validation, logging, and testing setup
