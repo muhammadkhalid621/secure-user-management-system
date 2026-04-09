@@ -1,16 +1,17 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: sums-postgres
+  mysql:
+    image: mysql:8.4
+    container_name: sums-mysql
     restart: unless-stopped
     environment:
-      POSTGRES_DB: sums_db
-      POSTGRES_USER: sums_user
-      POSTGRES_PASSWORD: sums_password
+      MYSQL_DATABASE: sums_db
+      MYSQL_USER: sums_user
+      MYSQL_PASSWORD: sums_password
+      MYSQL_ROOT_PASSWORD: root_password
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
 
   redis:
     image: redis:7-alpine
@@ -22,6 +23,5 @@ services:
       - redis_data:/data
 
 volumes:
-  postgres_data:
+  mysql_data:
   redis_data:
-

@@ -13,6 +13,10 @@
     "dev:backend": "npm run dev --workspace backend",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
+    "db:migrate": "npm run db:migrate --workspace backend",
+    "db:migrate:undo": "npm run db:migrate:undo --workspace backend",
+    "db:seed": "npm run db:seed --workspace backend",
+    "db:seed:undo": "npm run db:seed:undo --workspace backend",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   }

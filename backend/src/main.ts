@@ -1,27 +1,22 @@
-import cors from "cors";
-import dotenv from "dotenv";
-import express from "express";
+import { createServer } from "node:http";
+import { app } from "./app.js";
+import { config } from "./config.js";
+import { sequelize } from "./database/sequelize.js";
+import { socketService } from "./sockets/socket.service.js";
+import { startQueueWorkers } from "./workers/queue-workers.js";
 
-dotenv.config();
+const bootstrap = async () => {
+  await sequelize.authenticate();
+  const server = createServer(app);
+  socketService.initialize(server);
+  startQueueWorkers();
 
-const app = express();
-const port = Number(process.env.PORT ?? 4000);
-const appName = process.env.APP_NAME ?? "Mini Secure User Management API";
-const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:3000";
-const apiPrefix = process.env.API_PREFIX ?? "api";
-
-app.use(cors({ origin: corsOrigin, credentials: true }));
-app.use(express.json());
-
-app.get(`/${apiPrefix}/health`, (_req, res) => {
-  res.json({
-    ok: true,
-    app: appName,
-    environment: process.env.NODE_ENV ?? "development"
+  server.listen(config.port, () => {
+    console.log(`${config.appName} listening on http://localhost:${config.port}`);
   });
-});
+};
 
-app.listen(port, () => {
-  console.log(`${appName} listening on http://localhost:${port}`);
+bootstrap().catch((error) => {
+  console.error("Failed to start application", error);
+  process.exit(1);
 });
-

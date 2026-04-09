@@ -6,8 +6,8 @@ Initial repository setup for the assignment. This level includes only project st
 
 - Frontend: Next.js + TypeScript
 - Backend: Express + TypeScript
-- Database: PostgreSQL
-- Realtime / caching path: Redis + WebSocket support in backend
+- Database: MySQL + Sequelize
+- Realtime / caching path: Redis + Bull queue + WebSocket support in backend
 - Repository layout: single repo with separate `frontend` and `backend` projects
 - Local infra: Docker Compose
 
@@ -36,7 +36,7 @@ Initial repository setup for the assignment. This level includes only project st
 npm install
 ```
 
-2. Start PostgreSQL and Redis:
+2. Start MySQL and Redis:
 
 ```bash
 npm run docker:up
@@ -55,11 +55,18 @@ cp frontend/.env.local.example frontend/.env.local
 npm run dev
 ```
 
+5. Run backend migrations and seed the admin user:
+
+```bash
+npm run db:migrate --workspace backend
+npm run db:seed --workspace backend
+```
+
 ## App Ports
 
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:4000`
-- PostgreSQL: `localhost:5432`
+- MySQL: `localhost:3306`
 - Redis: `localhost:6379`
 
 ## Current Scope
@@ -68,8 +75,9 @@ This setup currently includes:
 
 - Single-repo frontend/backend separation
 - Frontend and backend app skeletons
-- Example environment files
-- Docker services for PostgreSQL and Redis
+- Example environment files for API, MySQL, Redis, and Bull queue
+- Docker services for MySQL and Redis
+- Sequelize config, migrations, and seeders
 - Base TypeScript configuration and starter entrypoints
 
 The assignment features will be implemented in later levels:
