@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { AUTH_TOKEN_TYPES } from "../../constants/auth.js";
 import { config } from "../../config.js";
 import { CACHE_KEYS } from "../../constants/cache.js";
 import { ERROR_CODES } from "../../constants/error-codes.js";
@@ -11,19 +12,23 @@ import { verifyPassword } from "../../lib/password.js";
 import { notificationService } from "../notifications/notification.service.js";
 import { authEventService } from "./auth-event.service.js";
 import { authContextService } from "./auth-context.service.js";
+import { refreshTokenStoreService } from "./refresh-token-store.service.js";
 import { userService } from "../users/user.service.js";
 import type { SafeUser } from "../users/user.types.js";
 import type { AuthTokenPayload } from "./auth.types.js";
 
-const refreshTokenStore = new Set<string>();
-
 const hashToken = (token: string): string =>
   createHash("sha256").update(token).digest("hex");
+
+const getRemainingTokenTtlSeconds = (payload: Pick<AuthTokenPayload, "exp">) =>
+  Math.max(1, payload.exp - Math.floor(Date.now() / 1000));
 
 const createPayload = (user: SafeUser, type: "access" | "refresh"): AuthTokenPayload => ({
   sub: user.id,
   email: user.email,
-  type
+  type,
+  exp: 0,
+  iat: 0
 });
 
 const readTokenPayload = (token: string, secret: string): AuthTokenPayload => {
@@ -44,7 +49,9 @@ const readTokenPayload = (token: string, secret: string): AuthTokenPayload => {
   return {
     sub: payload.sub,
     email: payload.email,
-    type: payload.type
+    type: payload.type,
+    exp: payload.exp as number,
+    iat: payload.iat as number
   };
 };
 
@@ -117,7 +124,7 @@ export class AuthService {
   async refresh(refreshToken: string) {
     const hashedToken = hashToken(refreshToken);
 
-    if (!refreshTokenStore.has(hashedToken)) {
+    if (await refreshTokenStoreService.isRevoked(hashedToken)) {
       throw new AppError(
         ERROR_MESSAGES.AUTH.INVALID_REFRESH_TOKEN,
         HTTP_STATUS.UNAUTHORIZED,
@@ -127,7 +134,7 @@ export class AuthService {
 
     const payload = readTokenPayload(refreshToken, config.jwtRefreshSecret);
 
-    if (payload.type !== "refresh") {
+    if (payload.type !== AUTH_TOKEN_TYPES.REFRESH) {
       throw new AppError(
         ERROR_MESSAGES.AUTH.INVALID_REFRESH_TOKEN_TYPE,
         HTTP_STATUS.UNAUTHORIZED,
@@ -135,7 +142,18 @@ export class AuthService {
       );
     }
 
-    refreshTokenStore.delete(hashedToken);
+    if (!(await refreshTokenStoreService.isActive(hashedToken))) {
+      throw new AppError(
+        ERROR_MESSAGES.AUTH.INVALID_REFRESH_TOKEN,
+        HTTP_STATUS.UNAUTHORIZED,
+        ERROR_CODES.INVALID_REFRESH_TOKEN
+      );
+    }
+
+    await refreshTokenStoreService.revoke(
+      hashedToken,
+      getRemainingTokenTtlSeconds(payload)
+    );
 
     const user = await userService.findSafeByIdOrThrow(payload.sub);
     await authEventService.enqueue({
@@ -147,12 +165,22 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  logout(refreshToken: string) {
-    refreshTokenStore.delete(hashToken(refreshToken));
+  async logout(refreshToken: string) {
+    const tokenHash = hashToken(refreshToken);
+
+    try {
+      const payload = readTokenPayload(refreshToken, config.jwtRefreshSecret);
+      await refreshTokenStoreService.revoke(
+        tokenHash,
+        getRemainingTokenTtlSeconds(payload)
+      );
+    } catch {
+      await refreshTokenStoreService.removeActive(tokenHash);
+    }
   }
 
   async logoutWithAudit(refreshToken: string, actorUserId?: string | null) {
-    this.logout(refreshToken);
+    await this.logout(refreshToken);
     await authEventService.enqueue({
       action: "auth.logout",
       message: SUCCESS_MESSAGES.AUTH.LOGOUT,
@@ -182,7 +210,7 @@ export class AuthService {
   verifyAccessToken(token: string): AuthTokenPayload {
     const payload = readTokenPayload(token, config.jwtAccessSecret);
 
-    if (payload.type !== "access") {
+    if (payload.type !== AUTH_TOKEN_TYPES.ACCESS) {
       throw new AppError(
         ERROR_MESSAGES.AUTH.INVALID_ACCESS_TOKEN_TYPE,
         HTTP_STATUS.UNAUTHORIZED,
@@ -197,19 +225,27 @@ export class AuthService {
     return authContextService.resolve(userId);
   }
 
-  private buildAuthResponse(user: SafeUser) {
+  private async buildAuthResponse(user: SafeUser) {
     const accessToken = signJwt(
-      createPayload(user, "access"),
+      createPayload(user, AUTH_TOKEN_TYPES.ACCESS),
       config.jwtAccessSecret,
       config.jwtAccessExpiresIn
     );
     const refreshToken = signJwt(
-      createPayload(user, "refresh"),
+      createPayload(user, AUTH_TOKEN_TYPES.REFRESH),
       config.jwtRefreshSecret,
       config.jwtRefreshExpiresIn
     );
 
-    refreshTokenStore.add(hashToken(refreshToken));
+    const refreshPayload = readTokenPayload(
+      refreshToken,
+      config.jwtRefreshSecret
+    );
+    await refreshTokenStoreService.storeActive(
+      hashToken(refreshToken),
+      user.id,
+      getRemainingTokenTtlSeconds(refreshPayload)
+    );
 
     return {
       user,

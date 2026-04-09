@@ -1,4 +1,7 @@
 import { createHmac } from "node:crypto";
+import { ERROR_CODES } from "../constants/error-codes.js";
+import { HTTP_STATUS } from "../constants/http.js";
+import { ERROR_MESSAGES } from "../constants/messages.js";
 import { AppError } from "../errors/app-error.js";
 
 type JwtPayload = Record<string, unknown> & {
@@ -20,7 +23,7 @@ const base64UrlDecode = (value: string): string => {
   return Buffer.from(`${normalized}${padding}`, "base64").toString("utf8");
 };
 
-const parseExpiresIn = (value: string): number => {
+export const parseDurationToSeconds = (value: string): number => {
   const match = value.match(/^(\d+)([smhd])$/);
 
   if (!match) {
@@ -61,7 +64,7 @@ export const signJwt = (
   const fullPayload: JwtPayload = {
     ...payload,
     iat: now,
-    exp: now + parseExpiresIn(expiresIn)
+    exp: now + parseDurationToSeconds(expiresIn)
   };
 
   const encodedHeader = base64UrlEncode(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -75,22 +78,33 @@ export const verifyJwt = (token: string, secret: string): JwtPayload => {
   const [header, payload, signature] = token.split(".");
 
   if (!header || !payload || !signature) {
-    throw new AppError("Invalid token format", 401, "INVALID_TOKEN");
+    throw new AppError(
+      ERROR_MESSAGES.AUTH.INVALID_TOKEN_FORMAT,
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.INVALID_TOKEN
+    );
   }
 
   const expectedSignature = signSegment(header, payload, secret);
 
   if (signature !== expectedSignature) {
-    throw new AppError("Invalid token signature", 401, "INVALID_TOKEN");
+    throw new AppError(
+      ERROR_MESSAGES.AUTH.INVALID_TOKEN_SIGNATURE,
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.INVALID_TOKEN
+    );
   }
 
   const decodedPayload = JSON.parse(base64UrlDecode(payload)) as JwtPayload;
   const now = Math.floor(Date.now() / 1000);
 
   if (decodedPayload.exp <= now) {
-    throw new AppError("Token expired", 401, "TOKEN_EXPIRED");
+    throw new AppError(
+      ERROR_MESSAGES.AUTH.TOKEN_EXPIRED,
+      HTTP_STATUS.UNAUTHORIZED,
+      ERROR_CODES.TOKEN_EXPIRED
+    );
   }
 
   return decodedPayload;
 };
-
