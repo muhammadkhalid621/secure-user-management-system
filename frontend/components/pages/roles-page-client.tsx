@@ -5,6 +5,9 @@ import { Pencil, ShieldPlus, Trash2 } from "lucide-react";
 import { loadCollection, submitEntity } from "@/lib/client-crud";
 import { PERMISSIONS, QUERY_DEFAULTS } from "@/lib/constants";
 import type { Permission, Role } from "@/lib/types";
+import { validateRequired, validateSlug, type FieldErrors, hasValidationErrors } from "@/lib/validation";
+import { usePermission } from "@/hooks/use-permission";
+import { ActionGuard } from "@/components/guards/action-guard";
 import { PermissionGuard } from "@/components/guards/permission-guard";
 import { useAsyncData } from "@/lib/query-hooks";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FiltersBar } from "@/components/ui/filters-bar";
+import { FieldError, FormError } from "@/components/ui/form-error";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PageSectionHeader, SectionActionButton } from "@/components/ui/page-section-header";
@@ -30,6 +34,11 @@ export const RolesPageClient = () => {
     description: "",
     permissionIds: [] as string[]
   });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<"name" | "slug">>({});
+  const canCreate = usePermission(PERMISSIONS.ROLES_CREATE);
+  const canUpdate = usePermission(PERMISSIONS.ROLES_UPDATE);
+  const canDelete = usePermission(PERMISSIONS.ROLES_DELETE);
 
   const rolesQuery = useAsyncData(
     () =>
@@ -58,16 +67,20 @@ export const RolesPageClient = () => {
               title="Roles"
               description="Define access groups and assign permissions."
               action={
-                <SectionActionButton
-                  variant="secondary"
-                  onClick={() => {
-                    setEditingRole(null);
-                    setForm({ name: "", slug: "", description: "", permissionIds: [] });
-                  }}
-                >
-                  <ShieldPlus className="mr-2 h-4 w-4" />
-                  New Role
-                </SectionActionButton>
+                <ActionGuard permission={PERMISSIONS.ROLES_CREATE}>
+                  <SectionActionButton
+                    variant="secondary"
+                    onClick={() => {
+                      setEditingRole(null);
+                      setFormError(null);
+                      setFieldErrors({});
+                      setForm({ name: "", slug: "", description: "", permissionIds: [] });
+                    }}
+                  >
+                    <ShieldPlus className="mr-2 h-4 w-4" />
+                    New Role
+                  </SectionActionButton>
+                </ActionGuard>
               }
             />
           }
@@ -116,34 +129,41 @@ export const RolesPageClient = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              setEditingRole(role);
-                              setForm({
-                                name: role.name,
-                                slug: role.slug,
-                                description: role.description ?? "",
-                                permissionIds: role.permissions.map((permission) => permission.id)
-                              });
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={async () => {
-                              await submitEntity({
-                                path: `/api/roles/${role.id}`,
-                                method: "DELETE"
-                              });
-                              await rolesQuery.reload();
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {canUpdate ? (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setEditingRole(role);
+                                setFormError(null);
+                                setFieldErrors({});
+                                setForm({
+                                  name: role.name,
+                                  slug: role.slug,
+                                  description: role.description ?? "",
+                                  permissionIds: role.permissions.map((permission) => permission.id)
+                                });
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                          {canDelete ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                setFormError(null);
+                                await submitEntity({
+                                  path: `/api/roles/${role.id}`,
+                                  method: "DELETE"
+                                });
+                                await rolesQuery.reload();
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -161,14 +181,42 @@ export const RolesPageClient = () => {
             <CardTitle>{editingRole ? "Update role" : "Create role"}</CardTitle>
           </CardHeader>
           <CardContent>
+            {!canCreate && !canUpdate ? (
+              <EmptyState
+                title="No mutation access"
+                description="Your role can view roles, but it cannot create or update them."
+              />
+            ) : (
             <form
               className="space-y-4"
               onSubmit={async (event) => {
                 event.preventDefault();
+                setFormError(null);
+
+                const nextErrors: FieldErrors<"name" | "slug"> = {
+                  name: validateRequired(form.name, "Role name", 2),
+                  slug: validateSlug(form.slug)
+                };
+
+                setFieldErrors(nextErrors);
+
+                if (hasValidationErrors(nextErrors)) {
+                  return;
+                }
+
+                if (editingRole && !canUpdate) {
+                  setFormError("You are not allowed to update roles.");
+                  return;
+                }
+
+                if (!editingRole && !canCreate) {
+                  setFormError("You are not allowed to create roles.");
+                  return;
+                }
 
                 const payload = {
                   name: form.name,
-                  slug: form.slug,
+                  slug: form.slug.trim().toLowerCase(),
                   description: form.description || undefined,
                   permissionIds: form.permissionIds
                 };
@@ -194,9 +242,11 @@ export const RolesPageClient = () => {
             >
               <FormField label="Role name">
                 <Input placeholder="Role name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+                <FieldError message={fieldErrors.name} />
               </FormField>
               <FormField label="Role slug">
                 <Input placeholder="role-slug" value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))} />
+                <FieldError message={fieldErrors.slug} />
               </FormField>
               <FormField label="Description">
                 <Textarea placeholder="Description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
@@ -227,10 +277,12 @@ export const RolesPageClient = () => {
                   </div>
                 </div>
               </FormField>
+              <FormError message={formError} />
               <Button className="w-full" type="submit">
                 {editingRole ? "Save changes" : "Create role"}
               </Button>
             </form>
+            )}
           </CardContent>
         </Card>
       </div>

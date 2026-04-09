@@ -5,6 +5,9 @@ import { Pencil, Trash2, UserPlus } from "lucide-react";
 import { loadCollection, submitEntity } from "@/lib/client-crud";
 import { PERMISSIONS, QUERY_DEFAULTS } from "@/lib/constants";
 import type { Role, SafeUser } from "@/lib/types";
+import { hasValidationErrors, validateEmail, validatePassword, validateRequired, type FieldErrors } from "@/lib/validation";
+import { usePermission } from "@/hooks/use-permission";
+import { ActionGuard } from "@/components/guards/action-guard";
 import { PermissionGuard } from "@/components/guards/permission-guard";
 import { useAsyncData } from "@/lib/query-hooks";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FieldError, FormError } from "@/components/ui/form-error";
 import { FiltersBar } from "@/components/ui/filters-bar";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -31,6 +35,11 @@ export const UsersPageClient = () => {
     password: "",
     roleIds: [] as string[]
   });
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<"name" | "email" | "password">>({});
+  const canCreate = usePermission(PERMISSIONS.USERS_CREATE);
+  const canUpdate = usePermission(PERMISSIONS.USERS_UPDATE);
+  const canDelete = usePermission(PERMISSIONS.USERS_DELETE);
 
   const usersQuery = useAsyncData(
     () =>
@@ -71,10 +80,12 @@ export const UsersPageClient = () => {
               title="Users"
               description="Search, filter, create, and update system users."
               action={
-                <SectionActionButton variant="secondary" onClick={resetForm}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  New User
-                </SectionActionButton>
+                <ActionGuard permission={PERMISSIONS.USERS_CREATE}>
+                  <SectionActionButton variant="secondary" onClick={resetForm}>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    New User
+                  </SectionActionButton>
+                </ActionGuard>
               }
             />
           }
@@ -133,34 +144,41 @@ export const UsersPageClient = () => {
                       <TableCell>{user.permissions.length}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              setEditingUser(user);
-                              setForm({
-                                name: user.name,
-                                email: user.email,
-                                password: "",
-                                roleIds: user.roles.map((role) => role.id)
-                              });
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={async () => {
-                              await submitEntity({
-                                path: `/api/users/${user.id}`,
-                                method: "DELETE"
-                              });
-                              await usersQuery.reload();
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {canUpdate ? (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setEditingUser(user);
+                                setFormError(null);
+                                setFieldErrors({});
+                                setForm({
+                                  name: user.name,
+                                  email: user.email,
+                                  password: "",
+                                  roleIds: user.roles.map((role) => role.id)
+                                });
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                          {canDelete ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                setFormError(null);
+                                await submitEntity({
+                                  path: `/api/users/${user.id}`,
+                                  method: "DELETE"
+                                });
+                                await usersQuery.reload();
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -178,10 +196,39 @@ export const UsersPageClient = () => {
             <CardTitle>{editingUser ? "Update user" : "Create user"}</CardTitle>
           </CardHeader>
           <CardContent>
+            {!canCreate && !canUpdate ? (
+              <EmptyState
+                title="No mutation access"
+                description="Your role can view users, but it cannot create or update them."
+              />
+            ) : (
             <form
               className="space-y-4"
               onSubmit={async (event) => {
                 event.preventDefault();
+                setFormError(null);
+
+                const nextErrors: FieldErrors<"name" | "email" | "password"> = {
+                  name: validateRequired(form.name, "Full name", 2),
+                  email: validateEmail(form.email),
+                  ...(editingUser ? {} : { password: validatePassword(form.password) })
+                };
+
+                setFieldErrors(nextErrors);
+
+                if (hasValidationErrors(nextErrors)) {
+                  return;
+                }
+
+                if (editingUser && !canUpdate) {
+                  setFormError("You are not allowed to update users.");
+                  return;
+                }
+
+                if (!editingUser && !canCreate) {
+                  setFormError("You are not allowed to create users.");
+                  return;
+                }
 
                 if (editingUser) {
                   await submitEntity({
@@ -207,13 +254,16 @@ export const UsersPageClient = () => {
             >
               <FormField label="Full name">
                 <Input placeholder="Full name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+                <FieldError message={fieldErrors.name} />
               </FormField>
               <FormField label="Email address">
                 <Input type="email" placeholder="Email address" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} />
+                <FieldError message={fieldErrors.email} />
               </FormField>
               {!editingUser ? (
                 <FormField label="Temporary password">
                   <Input type="password" placeholder="Temporary password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} />
+                  <FieldError message={fieldErrors.password} />
                 </FormField>
               ) : null}
               <FormField label="Assigned roles" hint="Hold command/control to select multiple roles.">
@@ -235,10 +285,12 @@ export const UsersPageClient = () => {
                   ))}
                 </Select>
               </FormField>
+              <FormError message={formError} />
               <Button className="w-full" type="submit">
                 {editingUser ? "Save changes" : "Create user"}
               </Button>
             </form>
+            )}
           </CardContent>
         </Card>
       </div>

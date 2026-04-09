@@ -277,3 +277,58 @@ export const getServerSession = async () => {
     socketToken: activeAccessToken ?? null
   };
 };
+
+export const getServerSessionResponse = async () => {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get(AUTH_COOKIE_NAMES.ACCESS_TOKEN)?.value;
+  const refreshToken = cookieStore.get(AUTH_COOKIE_NAMES.REFRESH_TOKEN)?.value;
+
+  if (!accessToken && !refreshToken) {
+    return unauthorizedJson();
+  }
+
+  let activeAccessToken = accessToken;
+  let rotatedTokens: AuthTokens | null = null;
+
+  let profileResponse = accessToken
+    ? await requestBackend("/auth/profile", { method: "GET" }, accessToken)
+    : new Response(null, { status: 401 });
+
+  if (profileResponse.status === 401 && refreshToken) {
+    rotatedTokens = await refreshTokens(refreshToken);
+
+    if (!rotatedTokens) {
+      const response = unauthorizedJson();
+      clearAuthCookies(response);
+      return response;
+    }
+
+    activeAccessToken = rotatedTokens.accessToken;
+    profileResponse = await requestBackend("/auth/profile", { method: "GET" }, rotatedTokens.accessToken);
+  }
+
+  if (!profileResponse.ok) {
+    const response = unauthorizedJson();
+    clearAuthCookies(response);
+    return response;
+  }
+
+  const payload = await parseJsonSafely<ApiSuccessResponse<SafeUser>>(profileResponse);
+
+  if (!payload) {
+    const response = unauthorizedJson();
+    clearAuthCookies(response);
+    return response;
+  }
+
+  const response = successJson({
+    user: payload.data,
+    socketToken: activeAccessToken ?? null
+  });
+
+  if (rotatedTokens) {
+    setAuthCookies(response, rotatedTokens);
+  }
+
+  return response;
+};

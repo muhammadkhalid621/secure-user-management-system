@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { APP_ROUTES } from "@/lib/constants";
+import { hasValidationErrors, validateEmail, validatePassword, validateRequired, type FieldErrors } from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FieldError, FormError } from "@/components/ui/form-error";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { login, register } from "@/store/auth-slice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -18,6 +21,7 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<FieldErrors<"name" | "email" | "password">>({});
 
   const isRegister = mode === "register";
 
@@ -41,6 +45,18 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
             onSubmit={async (event) => {
               event.preventDefault();
 
+              const nextErrors: FieldErrors<"name" | "email" | "password"> = {
+                ...(isRegister ? { name: validateRequired(name, "Full name", 2) } : {}),
+                email: validateEmail(email),
+                password: validatePassword(password)
+              };
+
+              setErrors(nextErrors);
+
+              if (hasValidationErrors(nextErrors)) {
+                return;
+              }
+
               const action = isRegister
                 ? register({ name, email, password })
                 : login({ email, password });
@@ -53,29 +69,34 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
             }}
           >
             {isRegister ? (
+              <FormField label="Full name">
+                <Input
+                  placeholder="Full name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+                <FieldError message={errors.name} />
+              </FormField>
+            ) : null}
+            <FormField label="Email address">
               <Input
-                placeholder="Full name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
               />
-            ) : null}
-            <Input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            {authState.error ? (
-              <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                {authState.error}
-              </p>
-            ) : null}
+              <FieldError message={errors.email} />
+            </FormField>
+            <FormField label="Password">
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <FieldError message={errors.password} />
+            </FormField>
+            <FormError message={authState.error} />
             <Button className="w-full" type="submit">
               {authState.status === "loading"
                 ? "Please wait..."

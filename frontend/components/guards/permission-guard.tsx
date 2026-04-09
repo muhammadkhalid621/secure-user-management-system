@@ -1,8 +1,8 @@
 "use client";
 
 import { ShieldAlert } from "lucide-react";
+import { usePermission } from "@/hooks/use-permission";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAppSelector } from "@/store/hooks";
 
 export const PermissionGuard = ({
   permission,
@@ -11,9 +11,9 @@ export const PermissionGuard = ({
   permission: string;
   children: React.ReactNode;
 }) => {
-  const permissions = useAppSelector((state) => state.auth.user?.permissions ?? []);
+  const isAllowed = usePermission(permission);
 
-  if (!permissions.includes(permission)) {
+  if (!isAllowed) {
     return (
       <Card>
         <CardContent className="flex min-h-64 flex-col items-center justify-center text-center">
