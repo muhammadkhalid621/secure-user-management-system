@@ -1,17 +1,21 @@
 "use client";
 
-import { configureStore } from "@reduxjs/toolkit";
+import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import { authReducer } from "./auth-slice";
 import { notificationsReducer } from "./notifications-slice";
 
-export const createAppStore = () =>
+const rootReducer = combineReducers({
+  auth: authReducer,
+  notifications: notificationsReducer
+});
+
+export type RootState = ReturnType<typeof rootReducer>;
+
+export const createAppStore = (preloadedState?: Partial<RootState>) =>
   configureStore({
-    reducer: {
-      auth: authReducer,
-      notifications: notificationsReducer
-    }
+    reducer: rootReducer,
+    preloadedState: preloadedState as RootState | undefined
   });
 
 export type AppStore = ReturnType<typeof createAppStore>;
-export type RootState = ReturnType<AppStore["getState"]>;
 export type AppDispatch = AppStore["dispatch"];

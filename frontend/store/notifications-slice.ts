@@ -16,7 +16,7 @@ const notificationsSlice = createSlice({
   initialState,
   reducers: {
     pushNotification(state, action: PayloadAction<NotificationPayload>) {
-      state.items = [action.payload, ...state.items].slice(0, 25);
+      state.items = [action.payload, ...state.items].slice(0, 50);
     },
     clearNotifications(state) {
       state.items = [];

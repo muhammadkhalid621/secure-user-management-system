@@ -8,12 +8,20 @@ export const useAsyncData = <T>(
 ) => {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = async () => {
     setIsLoading(true);
-    const nextData = await loader();
-    setData(nextData);
-    setIsLoading(false);
+    setError(null);
+
+    try {
+      const nextData = await loader();
+      setData(nextData);
+    } catch (reloadError) {
+      setError(reloadError instanceof Error ? reloadError.message : "Unable to load data.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -21,11 +29,22 @@ export const useAsyncData = <T>(
 
     void (async () => {
       setIsLoading(true);
-      const nextData = await loader();
+      setError(null);
 
-      if (!cancelled) {
-        setData(nextData);
-        setIsLoading(false);
+      try {
+        const nextData = await loader();
+
+        if (!cancelled) {
+          setData(nextData);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Unable to load data.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     })();
 
@@ -38,6 +57,7 @@ export const useAsyncData = <T>(
     data,
     setData,
     isLoading,
+    error,
     reload
   };
 };

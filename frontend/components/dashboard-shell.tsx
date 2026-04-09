@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -11,6 +12,8 @@ import {
   Users
 } from "lucide-react";
 import { APP_ROUTES, PERMISSIONS } from "@/lib/constants";
+import type { RoleSummary } from "@/lib/types";
+import { appToast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +57,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
             </h2>
             <p className="mt-2 text-sm text-white/70">{user?.email}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {(user?.roles ?? []).map((role) => (
+              {(user?.roles ?? []).map((role: RoleSummary) => (
                 <Badge key={role.id} className="bg-white/15 text-white">
                   {role.slug}
                 </Badge>
@@ -86,8 +89,15 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
             variant="ghost"
             className="mt-6 w-full justify-start"
             onClick={async () => {
-              await dispatch(logout());
-              router.replace(APP_ROUTES.LOGIN);
+              const result = await dispatch(logout());
+
+              if (result.meta.requestStatus === "fulfilled") {
+                appToast.success("Logged out successfully.");
+                router.replace(APP_ROUTES.LOGIN);
+                return;
+              }
+
+              appToast.error("Logout failed.");
             }}
           >
             <LogOut className="mr-2 h-4 w-4" />

@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { APP_ROUTES } from "@/lib/constants";
-import { hasValidationErrors, validateEmail, validatePassword, validateRequired, type FieldErrors } from "@/lib/validation";
+import { appToast } from "@/lib/toast";
+import {
+  hasValidationErrors,
+  setFieldError,
+  validateAuthFields,
+  validateEmail,
+  validatePassword,
+  validateRequired,
+  type AuthField,
+  type FieldErrors
+} from "@/lib/validation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FieldError, FormError } from "@/components/ui/form-error";
@@ -21,7 +31,7 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<FieldErrors<"name" | "email" | "password">>({});
+  const [errors, setErrors] = useState<FieldErrors<AuthField>>({});
 
   const isRegister = mode === "register";
 
@@ -45,11 +55,7 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
             onSubmit={async (event) => {
               event.preventDefault();
 
-              const nextErrors: FieldErrors<"name" | "email" | "password"> = {
-                ...(isRegister ? { name: validateRequired(name, "Full name", 2) } : {}),
-                email: validateEmail(email),
-                password: validatePassword(password)
-              };
+              const nextErrors = validateAuthFields(mode, { name, email, password });
 
               setErrors(nextErrors);
 
@@ -64,40 +70,89 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
               const result = await dispatch(action);
 
               if (result.meta.requestStatus === "fulfilled") {
+                appToast.success(
+                  isRegister ? "Account created successfully." : "Signed in successfully."
+                );
                 router.replace(APP_ROUTES.DASHBOARD);
+              } else {
+                appToast.error(
+                  typeof result.payload === "string"
+                    ? result.payload
+                    : isRegister
+                      ? "Registration failed."
+                      : "Login failed."
+                );
               }
             }}
           >
             {isRegister ? (
-              <FormField label="Full name">
+              <FormField label="Full name" error={errors.name}>
                 <Input
                   placeholder="Full name"
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onBlur={() =>
+                    setErrors((current) =>
+                      setFieldError(current, "name", validateRequired(name, "Full name", 2))
+                    )
+                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setName(value);
+
+                    if (errors.name) {
+                      setErrors((current) =>
+                        setFieldError(current, "name", validateRequired(value, "Full name", 2))
+                      );
+                    }
+                  }}
                 />
                 <FieldError message={errors.name} />
               </FormField>
             ) : null}
-            <FormField label="Email address">
+            <FormField label="Email address" error={errors.email}>
               <Input
                 type="email"
                 placeholder="Email address"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onBlur={() =>
+                  setErrors((current) => setFieldError(current, "email", validateEmail(email)))
+                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setEmail(value);
+
+                  if (errors.email) {
+                    setErrors((current) => setFieldError(current, "email", validateEmail(value)));
+                  }
+                }}
               />
               <FieldError message={errors.email} />
             </FormField>
-            <FormField label="Password">
+            <FormField label="Password" error={errors.password}>
               <Input
                 type="password"
                 placeholder="Password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onBlur={() =>
+                  setErrors((current) =>
+                    setFieldError(current, "password", validatePassword(password))
+                  )
+                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setPassword(value);
+
+                  if (errors.password) {
+                    setErrors((current) =>
+                      setFieldError(current, "password", validatePassword(value))
+                    );
+                  }
+                }}
               />
               <FieldError message={errors.password} />
             </FormField>
             <FormError message={authState.error} />
-            <Button className="w-full" type="submit">
+            <Button className="w-full" type="submit" disabled={authState.status === "loading"}>
               {authState.status === "loading"
                 ? "Please wait..."
                 : isRegister
