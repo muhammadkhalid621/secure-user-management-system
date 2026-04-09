@@ -2,23 +2,22 @@ import { AppError } from "../../errors/app-error.js";
 import { ERROR_CODES } from "../../constants/error-codes.js";
 import { HTTP_STATUS } from "../../constants/http.js";
 import { ERROR_MESSAGES } from "../../constants/messages.js";
-import { buildPaginationMeta, type ListQuery } from "../../lib/list-query.js";
+import { findOrThrow } from "../../lib/find-or-throw.js";
+import { buildListResult } from "../../lib/list-result.js";
+import type { ListQuery } from "../../lib/list-query.js";
 import { roleRepository } from "./role.repository.js";
 import { roleSideEffectsService } from "./role.side-effects.js";
 import type { Role } from "./role.types.js";
 
 export class RoleService {
-  async list(listQuery?: ListQuery): Promise<{ rows: Role[]; meta: ReturnType<typeof buildPaginationMeta> }> {
+  async list(listQuery?: ListQuery) {
     const result = await roleRepository.findAll(listQuery);
 
-    return {
+    return buildListResult({
       rows: result.rows,
-      meta: buildPaginationMeta({
-        page: listQuery?.page ?? 1,
-        limit: listQuery?.limit ?? (result.count || 1),
-        total: result.count
-      })
-    };
+      count: result.count,
+      listQuery
+    });
   }
 
   async ensureAllExist(ids: string[]) {
@@ -26,31 +25,21 @@ export class RoleService {
   }
 
   async findBySlugOrThrow(slug: string): Promise<Role> {
-    const role = await roleRepository.findBySlug(slug);
-
-    if (!role) {
-      throw new AppError(
-        ERROR_MESSAGES.ROLES.NOT_FOUND,
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.ROLE_NOT_FOUND
-      );
-    }
-
-    return role;
+    return findOrThrow({
+      value: await roleRepository.findBySlug(slug),
+      message: ERROR_MESSAGES.ROLES.NOT_FOUND,
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.ROLE_NOT_FOUND
+    });
   }
 
   async findByIdOrThrow(id: string): Promise<Role> {
-    const role = await roleRepository.findById(id);
-
-    if (!role) {
-      throw new AppError(
-        ERROR_MESSAGES.ROLES.NOT_FOUND,
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.ROLE_NOT_FOUND
-      );
-    }
-
-    return role;
+    return findOrThrow({
+      value: await roleRepository.findById(id),
+      message: ERROR_MESSAGES.ROLES.NOT_FOUND,
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.ROLE_NOT_FOUND
+    });
   }
 
   async create(input: {
@@ -75,7 +64,7 @@ export class RoleService {
     await roleSideEffectsService.onMutation({
       action: "create",
       actorUserId: input.actorUserId ?? null,
-      role
+      entity: role
     });
 
     return role;
@@ -103,40 +92,34 @@ export class RoleService {
       }
     }
 
-    const role = await roleRepository.update(id, input);
-
-    if (!role) {
-      throw new AppError(
-        ERROR_MESSAGES.ROLES.NOT_FOUND,
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.ROLE_NOT_FOUND
-      );
-    }
+    const role = findOrThrow({
+      value: await roleRepository.update(id, input),
+      message: ERROR_MESSAGES.ROLES.NOT_FOUND,
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.ROLE_NOT_FOUND
+    });
 
     await roleSideEffectsService.onMutation({
       action: "update",
       actorUserId: actorUserId ?? null,
-      role
+      entity: role
     });
 
     return role;
   }
 
   async delete(id: string, actorUserId?: string | null): Promise<Role> {
-    const role = await roleRepository.delete(id);
-
-    if (!role) {
-      throw new AppError(
-        ERROR_MESSAGES.ROLES.NOT_FOUND,
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.ROLE_NOT_FOUND
-      );
-    }
+    const role = findOrThrow({
+      value: await roleRepository.delete(id),
+      message: ERROR_MESSAGES.ROLES.NOT_FOUND,
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.ROLE_NOT_FOUND
+    });
 
     await roleSideEffectsService.onMutation({
       action: "delete",
       actorUserId: actorUserId ?? null,
-      role
+      entity: role
     });
 
     return role;

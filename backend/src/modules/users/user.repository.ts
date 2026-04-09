@@ -4,6 +4,11 @@ import { PermissionModel } from "../../database/models/permission.model.js";
 import { RoleModel } from "../../database/models/role.model.js";
 import { UserModel } from "../../database/models/user.model.js";
 import type { ListQuery } from "../../lib/list-query.js";
+import {
+  createWithRelations,
+  deleteAndReturn,
+  updateWithRelations
+} from "../../lib/sequelize-relation-helpers.js";
 import type { User } from "./user.types.js";
 
 const userInclude = [
@@ -111,21 +116,20 @@ class UserRepository {
     passwordHash: string;
     roleIds?: string[];
   }): Promise<User> {
-    const user = await UserModel.create({
-      id: randomUUID(),
-      name: input.name,
-      email: input.email,
-      passwordHash: input.passwordHash
+    return createWithRelations({
+      create: () =>
+        UserModel.create({
+          id: randomUUID(),
+          name: input.name,
+          email: input.email,
+          passwordHash: input.passwordHash
+        }),
+      findByPk: (userId, options) => UserModel.findByPk(userId, options),
+      include: userInclude,
+      relationSetterName: "setRoles",
+      relationIds: input.roleIds,
+      map: mapUser
     });
-
-    if (input.roleIds && input.roleIds.length > 0) {
-      await (user as unknown as { setRoles: (ids: string[]) => Promise<void> }).setRoles(
-        input.roleIds
-      );
-    }
-
-    const created = await UserModel.findByPk(user.id, { include: userInclude });
-    return mapUser(created!);
   }
 
   async update(
@@ -142,31 +146,27 @@ class UserRepository {
       return undefined;
     }
 
-    await current.update({
-      name: input.name ?? current.name,
-      email: input.email ?? current.email
+    return updateWithRelations({
+      id,
+      findByPk: (userId, options) => UserModel.findByPk(userId, options),
+      include: userInclude,
+      attributes: {
+        name: input.name ?? current.name,
+        email: input.email ?? current.email
+      },
+      relationSetterName: "setRoles",
+      relationIds: input.roleIds,
+      map: mapUser
     });
-
-    if (input.roleIds) {
-      await (current as unknown as { setRoles: (ids: string[]) => Promise<void> }).setRoles(
-        input.roleIds
-      );
-    }
-
-    const updated = await UserModel.findByPk(id, { include: userInclude });
-    return mapUser(updated!);
   }
 
   async delete(id: string): Promise<User | undefined> {
-    const current = await UserModel.findByPk(id, { include: userInclude });
-
-    if (!current) {
-      return undefined;
-    }
-
-    const deleted = mapUser(current);
-    await current.destroy();
-    return deleted;
+    return deleteAndReturn({
+      id,
+      findByPk: (userId, options) => UserModel.findByPk(userId, options),
+      include: userInclude,
+      map: mapUser
+    });
   }
 }
 

@@ -1,6 +1,7 @@
 export const PERMISSIONS = {
   AUTH_PROFILE_READ: "auth.profile.read",
   AUTH_LOGOUT: "auth.logout",
+  AUDIT_LOGS_READ: "audit-logs.read",
   USERS_CREATE: "users.create",
   USERS_READ: "users.read",
   USERS_READ_OWN: "users.read.own",

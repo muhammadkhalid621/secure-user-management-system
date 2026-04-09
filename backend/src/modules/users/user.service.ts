@@ -2,8 +2,10 @@ import { AppError } from "../../errors/app-error.js";
 import { ERROR_CODES } from "../../constants/error-codes.js";
 import { HTTP_STATUS } from "../../constants/http.js";
 import { ERROR_MESSAGES } from "../../constants/messages.js";
+import { findOrThrow } from "../../lib/find-or-throw.js";
 import { ROLES } from "../../constants/roles.js";
-import { buildPaginationMeta, type ListQuery } from "../../lib/list-query.js";
+import { buildListResult } from "../../lib/list-result.js";
+import type { ListQuery } from "../../lib/list-query.js";
 import { hashPassword } from "../../lib/password.js";
 import { roleService } from "../roles/role.service.js";
 import { userRepository } from "./user.repository.js";
@@ -25,31 +27,23 @@ export class UserService {
     return [defaultRole.id];
   }
 
-  async list(listQuery?: ListQuery): Promise<{ rows: SafeUser[]; meta: ReturnType<typeof buildPaginationMeta> }> {
+  async list(listQuery?: ListQuery) {
     const result = await userRepository.findAll(listQuery);
 
-    return {
+    return buildListResult({
       rows: result.rows.map(sanitizeUser),
-      meta: buildPaginationMeta({
-        page: listQuery?.page ?? 1,
-        limit: listQuery?.limit ?? (result.count || 1),
-        total: result.count
-      })
-    };
+      count: result.count,
+      listQuery
+    });
   }
 
   async findByIdOrThrow(id: string): Promise<User> {
-    const user = await userRepository.findById(id);
-
-    if (!user) {
-      throw new AppError(
-        ERROR_MESSAGES.USERS.NOT_FOUND,
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.USER_NOT_FOUND
-      );
-    }
-
-    return user;
+    return findOrThrow({
+      value: await userRepository.findById(id),
+      message: ERROR_MESSAGES.USERS.NOT_FOUND,
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.USER_NOT_FOUND
+    });
   }
 
   async findSafeByIdOrThrow(id: string): Promise<SafeUser> {
@@ -87,7 +81,7 @@ export class UserService {
     await userSideEffectsService.onMutation({
       action: "create",
       actorUserId: input.actorUserId ?? null,
-      user
+      entity: user
     });
 
     return user;
@@ -130,44 +124,38 @@ export class UserService {
       }
     }
 
-    const updated = await userRepository.update(id, input);
-
-    if (!updated) {
-      throw new AppError(
-        ERROR_MESSAGES.USERS.NOT_FOUND,
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.USER_NOT_FOUND
-      );
-    }
+    const updated = findOrThrow({
+      value: await userRepository.update(id, input),
+      message: ERROR_MESSAGES.USERS.NOT_FOUND,
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.USER_NOT_FOUND
+    });
 
     const safeUser = sanitizeUser(updated);
 
     await userSideEffectsService.onMutation({
       action: "update",
       actorUserId: actorUserId ?? null,
-      user: safeUser
+      entity: safeUser
     });
 
     return safeUser;
   }
 
   async delete(id: string, actorUserId?: string | null): Promise<SafeUser> {
-    const deleted = await userRepository.delete(id);
-
-    if (!deleted) {
-      throw new AppError(
-        ERROR_MESSAGES.USERS.NOT_FOUND,
-        HTTP_STATUS.NOT_FOUND,
-        ERROR_CODES.USER_NOT_FOUND
-      );
-    }
+    const deleted = findOrThrow({
+      value: await userRepository.delete(id),
+      message: ERROR_MESSAGES.USERS.NOT_FOUND,
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.USER_NOT_FOUND
+    });
 
     const safeUser = sanitizeUser(deleted);
 
     await userSideEffectsService.onMutation({
       action: "delete",
       actorUserId: actorUserId ?? null,
-      user: safeUser
+      entity: safeUser
     });
 
     return safeUser;

@@ -39,7 +39,8 @@ export const ERROR_MESSAGES = {
     INVALID_REFRESH_TOKEN_TYPE: "Invalid refresh token type",
     INVALID_CREDENTIALS: "Invalid email or password",
     TOKEN_EXPIRED: "Token expired",
-    USER_HAS_NO_ROLES: "User has no assigned roles"
+    USER_HAS_NO_ROLES: "User has no assigned roles",
+    SOCKET_TOKEN_REQUIRED: "WebSocket authentication token is required"
   },
   USERS: {
     NOT_FOUND: "User not found",
@@ -52,6 +53,9 @@ export const ERROR_MESSAGES = {
   },
   PERMISSIONS: {
     INVALID_SELECTION: "One or more permissions are invalid"
+  },
+  AUDIT_LOGS: {
+    NOT_FOUND: "Audit log not found"
   }
 } as const;
 
@@ -72,6 +76,7 @@ export const MESSAGE_BUILDERS = {
   socketDisconnected: "WebSocket client disconnected",
   failedBootstrap: "Failed to start application",
   failedLoginAttempt: "Failed login attempt",
-  successfulLoginNotification: "Successful login"
+  successfulLoginNotification: "Successful login",
+  apiError: (method: string, path: string) => `API error on ${method.toUpperCase()} ${path}`,
+  apiErrorFallback: "Failed to persist API error log"
 } as const;
-

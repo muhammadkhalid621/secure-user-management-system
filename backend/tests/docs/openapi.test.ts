@@ -15,6 +15,7 @@ describe("openapi document", () => {
 
   it("documents the main api groups", () => {
     expect(openApiDocument.paths["/api/auth/login"]).toBeDefined();
+    expect(openApiDocument.paths["/api/audit-logs"]).toBeDefined();
     expect(openApiDocument.paths["/api/users"]).toBeDefined();
     expect(openApiDocument.paths["/api/roles"]).toBeDefined();
   });

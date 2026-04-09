@@ -1,9 +1,21 @@
 import { auditLogRepository } from "./audit-log.repository.js";
+import { buildListResult } from "../../lib/list-result.js";
+import type { ListQuery } from "../../lib/list-query.js";
 import type { CreateAuditLogInput } from "./audit-log.types.js";
 
 export class AuditLogService {
   record(input: CreateAuditLogInput) {
     return auditLogRepository.create(input);
+  }
+
+  async list(listQuery?: ListQuery) {
+    const result = await auditLogRepository.findAll(listQuery);
+
+    return buildListResult({
+      rows: result.rows,
+      count: result.count,
+      listQuery
+    });
   }
 
   recordCrud(input: {
@@ -26,4 +38,3 @@ export class AuditLogService {
 }
 
 export const auditLogService = new AuditLogService();
-

@@ -5,6 +5,7 @@ const crypto = require("node:crypto");
 const permissions = [
   ["Profile Read", "auth.profile.read", "Read authenticated profile"],
   ["Logout", "auth.logout", "Logout the current session"],
+  ["Read Audit Logs", "audit-logs.read", "Read audit log entries"],
   ["Create Users", "users.create", "Create users"],
   ["Read Users", "users.read", "Read all users"],
   ["Read Own User", "users.read.own", "Read own user profile"],
@@ -41,4 +42,3 @@ module.exports = {
     });
   }
 };
-

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { config } from "../config.js";
 import { createRateLimitMiddleware } from "../middlewares/rate-limit.middleware.js";
+import { auditLogsRouter } from "./audit-logs.routes.js";
 import { authRouter } from "./auth.routes.js";
 import { rolesRouter } from "./roles.routes.js";
 import { usersRouter } from "./users.routes.js";
@@ -16,5 +17,6 @@ apiRouter.use(
 );
 
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/audit-logs", auditLogsRouter);
 apiRouter.use("/roles", rolesRouter);
 apiRouter.use("/users", usersRouter);

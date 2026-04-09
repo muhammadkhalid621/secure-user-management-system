@@ -1,7 +1,21 @@
 import { AppError } from "../errors/app-error.js";
+import { ERROR_CODES } from "../constants/error-codes.js";
+import { HTTP_STATUS } from "../constants/http.js";
+import { ERROR_MESSAGES, MESSAGE_BUILDERS } from "../constants/messages.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const validationError = (message: string) =>
+  new AppError(message, HTTP_STATUS.BAD_REQUEST, ERROR_CODES.VALIDATION_ERROR);
+
+const requireObjectBody = (body: unknown): Record<string, unknown> => {
+  if (!isRecord(body)) {
+    throw validationError(ERROR_MESSAGES.COMMON.REQUEST_BODY_OBJECT);
+  }
+
+  return body;
+};
 
 const stringField = (
   value: unknown,
@@ -9,7 +23,7 @@ const stringField = (
   minLength = 1
 ): string => {
   if (typeof value !== "string" || value.trim().length < minLength) {
-    throw new AppError(`Invalid field: ${key}`, 400, "VALIDATION_ERROR");
+    throw validationError(MESSAGE_BUILDERS.invalidField(key));
   }
 
   return value.trim();
@@ -21,7 +35,7 @@ const optionalStringField = (value: unknown): string | undefined => {
   }
 
   if (typeof value !== "string") {
-    throw new AppError("Invalid optional string field", 400, "VALIDATION_ERROR");
+    throw validationError(ERROR_MESSAGES.COMMON.OPTIONAL_STRING_INVALID);
   }
 
   const normalized = value.trim();
@@ -33,7 +47,7 @@ const emailField = (value: unknown): string => {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (!emailPattern.test(email)) {
-    throw new AppError("Invalid email address", 400, "VALIDATION_ERROR");
+    throw validationError(ERROR_MESSAGES.COMMON.INVALID_EMAIL);
   }
 
   return email.toLowerCase();
@@ -43,52 +57,42 @@ const passwordField = (value: unknown): string => {
   const password = stringField(value, "password", 8);
 
   if (password.length < 8) {
-    throw new AppError(
-      "Password must be at least 8 characters",
-      400,
-      "VALIDATION_ERROR"
-    );
+    throw validationError(ERROR_MESSAGES.COMMON.PASSWORD_MIN_LENGTH);
   }
 
   return password;
 };
 
 export const validateRegisterBody = (body: unknown) => {
-  if (!isRecord(body)) {
-    throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
-  }
+  const normalizedBody = requireObjectBody(body);
 
   return {
-    name: stringField(body.name, "name", 2),
-    email: emailField(body.email),
-    password: passwordField(body.password)
+    name: stringField(normalizedBody.name, "name", 2),
+    email: emailField(normalizedBody.email),
+    password: passwordField(normalizedBody.password)
   };
 };
 
 export const validateLoginBody = (body: unknown) => {
-  if (!isRecord(body)) {
-    throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
-  }
+  const normalizedBody = requireObjectBody(body);
 
   return {
-    email: emailField(body.email),
-    password: passwordField(body.password)
+    email: emailField(normalizedBody.email),
+    password: passwordField(normalizedBody.password)
   };
 };
 
 export const validateRefreshBody = (body: unknown) => {
-  if (!isRecord(body)) {
-    throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
-  }
+  const normalizedBody = requireObjectBody(body);
 
   return {
-    refreshToken: stringField(body.refreshToken, "refreshToken")
+    refreshToken: stringField(normalizedBody.refreshToken, "refreshToken")
   };
 };
 
 export const validateStringArray = (value: unknown, key: string): string[] => {
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
-    throw new AppError(`Invalid field: ${key}`, 400, "VALIDATION_ERROR");
+    throw validationError(MESSAGE_BUILDERS.invalidField(key));
   }
 
   return Array.from(new Set(value.map((item) => item.trim())));
@@ -98,57 +102,60 @@ export const validateIdParam = (value: unknown, key = "id"): string =>
   stringField(value, key);
 
 export const validateUserCreateBody = (body: unknown) => {
-  if (!isRecord(body)) {
-    throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
-  }
+  const normalizedBody = requireObjectBody(body);
 
   return {
-    name: stringField(body.name, "name", 2),
-    email: emailField(body.email),
-    password: passwordField(body.password),
+    name: stringField(normalizedBody.name, "name", 2),
+    email: emailField(normalizedBody.email),
+    password: passwordField(normalizedBody.password),
     roleIds:
-      body.roleIds === undefined ? undefined : validateStringArray(body.roleIds, "roleIds")
+      normalizedBody.roleIds === undefined
+        ? undefined
+        : validateStringArray(normalizedBody.roleIds, "roleIds")
   };
 };
 
 export const validateUserUpdateBody = (body: unknown) => {
-  if (!isRecord(body)) {
-    throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
-  }
+  const normalizedBody = requireObjectBody(body);
 
   return {
-    name: optionalStringField(body.name),
-    email: body.email === undefined ? undefined : emailField(body.email),
+    name: optionalStringField(normalizedBody.name),
+    email:
+      normalizedBody.email === undefined ? undefined : emailField(normalizedBody.email),
     roleIds:
-      body.roleIds === undefined ? undefined : validateStringArray(body.roleIds, "roleIds")
+      normalizedBody.roleIds === undefined
+        ? undefined
+        : validateStringArray(normalizedBody.roleIds, "roleIds")
   };
 };
 
 export const validateRoleCreateBody = (body: unknown) => {
-  if (!isRecord(body)) {
-    throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
-  }
+  const normalizedBody = requireObjectBody(body);
 
   return {
-    name: stringField(body.name, "name", 2),
-    slug: stringField(body.slug, "slug", 2).toLowerCase(),
-    description: optionalStringField(body.description),
-    permissionIds: validateStringArray(body.permissionIds, "permissionIds")
+    name: stringField(normalizedBody.name, "name", 2),
+    slug: stringField(normalizedBody.slug, "slug", 2).toLowerCase(),
+    description: optionalStringField(normalizedBody.description),
+    permissionIds: validateStringArray(normalizedBody.permissionIds, "permissionIds")
   };
 };
 
 export const validateRoleUpdateBody = (body: unknown) => {
-  if (!isRecord(body)) {
-    throw new AppError("Request body must be an object", 400, "VALIDATION_ERROR");
-  }
+  const normalizedBody = requireObjectBody(body);
 
   return {
-    name: optionalStringField(body.name),
-    slug: body.slug === undefined ? undefined : stringField(body.slug, "slug", 2).toLowerCase(),
-    description: body.description === undefined ? undefined : optionalStringField(body.description) ?? null,
-    permissionIds:
-      body.permissionIds === undefined
+    name: optionalStringField(normalizedBody.name),
+    slug:
+      normalizedBody.slug === undefined
         ? undefined
-        : validateStringArray(body.permissionIds, "permissionIds")
+        : stringField(normalizedBody.slug, "slug", 2).toLowerCase(),
+    description:
+      normalizedBody.description === undefined
+        ? undefined
+        : optionalStringField(normalizedBody.description) ?? null,
+    permissionIds:
+      normalizedBody.permissionIds === undefined
+        ? undefined
+        : validateStringArray(normalizedBody.permissionIds, "permissionIds")
   };
 };

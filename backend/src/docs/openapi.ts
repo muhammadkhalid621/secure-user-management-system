@@ -17,6 +17,7 @@ export const openApiDocument = {
   tags: [
     { name: "System" },
     { name: "Auth" },
+    { name: "Audit Logs" },
     { name: "Users" },
     { name: "Roles" },
     { name: "Permissions" }
@@ -125,6 +126,21 @@ export const openApiDocument = {
           limit: { type: "integer" },
           total: { type: "integer" },
           totalPages: { type: "integer" }
+        }
+      },
+      AuditLog: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          actorUserId: { type: "string", format: "uuid", nullable: true },
+          entityType: { type: "string" },
+          entityId: { type: "string", nullable: true },
+          action: { type: "string" },
+          level: { type: "string", enum: ["info", "warn", "error"] },
+          message: { type: "string" },
+          metadata: { type: "object", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" }
         }
       },
       ErrorResponse: {
@@ -244,6 +260,45 @@ export const openApiDocument = {
         security: [{ bearerAuth: [] }],
         responses: {
           "200": { description: "Profile fetched" }
+        }
+      }
+    },
+    "/api/audit-logs": {
+      get: {
+        tags: ["Audit Logs"],
+        summary: "List audit logs",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: "query", name: "page", schema: { type: "integer" } },
+          { in: "query", name: "limit", schema: { type: "integer" } },
+          { in: "query", name: "search", schema: { type: "string" } },
+          { in: "query", name: "sortBy", schema: { type: "string" } },
+          { in: "query", name: "sortOrder", schema: { type: "string", enum: ["asc", "desc"] } },
+          { in: "query", name: "level", schema: { type: "string", enum: ["info", "warn", "error"] } },
+          { in: "query", name: "entityType", schema: { type: "string" } },
+          { in: "query", name: "action", schema: { type: "string" } },
+          { in: "query", name: "actorUserId", schema: { type: "string" } },
+          { in: "query", name: "entityId", schema: { type: "string" } }
+        ],
+        responses: {
+          "200": {
+            description: "Paginated audit logs",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean" },
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/AuditLog" }
+                    },
+                    meta: { $ref: "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -375,4 +430,3 @@ export const openApiDocument = {
     }
   }
 } as const;
-

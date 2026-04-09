@@ -58,7 +58,8 @@ export const config = {
   socket: {
     corsOrigin: process.env.SOCKET_CORS_ORIGIN ?? "http://localhost:3000",
     notificationEvent:
-      process.env.SOCKET_NOTIFICATION_EVENT ?? "notification"
+      process.env.SOCKET_NOTIFICATION_EVENT ?? "notification",
+    authRequired: process.env.SOCKET_AUTH_REQUIRED !== "false"
   },
   pagination: {
     defaultPage: Number(process.env.PAGINATION_DEFAULT_PAGE ?? 1),
