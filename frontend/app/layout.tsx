@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Mini Secure User Management",
-  description: "Frontend setup for the assignment project."
+  description: "Secure user management dashboard built with Next.js."
 };
 
 export default function RootLayout({
@@ -13,8 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }
-
