@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { loadCollection } from "@/lib/client-crud";
-import { PERMISSIONS } from "@/lib/constants";
+import { PERMISSIONS, QUERY_DEFAULTS } from "@/lib/constants";
 import type { AuditLog } from "@/lib/types";
 import { PermissionGuard } from "@/components/guards/permission-guard";
 import { useAsyncData } from "@/lib/query-hooks";
@@ -20,7 +20,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 export const AuditLogsPageClient = () => {
   const [search, setSearch] = useState("");
   const [level, setLevel] = useState("");
-  const [page, setPage] = useState<number>(1);
+  const [page, setPage] = useState<number>(QUERY_DEFAULTS.PAGE);
 
   const logsQuery = useAsyncData(
     () =>
@@ -38,7 +38,7 @@ export const AuditLogsPageClient = () => {
 
   return (
     <PermissionGuard permission={PERMISSIONS.AUDIT_LOGS_READ}>
-      logsQuery.isLoading ? (
+      {logsQuery.isLoading ? (
         <TableSkeleton columns={4} rows={6} />
       ) : (
         <DataTableShell
@@ -50,14 +50,21 @@ export const AuditLogsPageClient = () => {
           }
           filters={
             <FiltersBar className="md:grid-cols-[1fr_180px]">
-              <Input value={search} onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }} placeholder="Search message, action, or entity type" />
-              <Select value={level} onChange={(event) => {
-                setLevel(event.target.value);
-                setPage(1);
-              }}>
+              <Input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(QUERY_DEFAULTS.PAGE);
+                }}
+                placeholder="Search message, action, or entity type"
+              />
+              <Select
+                value={level}
+                onChange={(event) => {
+                  setLevel(event.target.value);
+                  setPage(QUERY_DEFAULTS.PAGE);
+                }}
+              >
                 <option value="">All levels</option>
                 <option value="info">Info</option>
                 <option value="warn">Warn</option>
@@ -67,9 +74,15 @@ export const AuditLogsPageClient = () => {
           }
           table={
             logsQuery.error ? (
-              <EmptyState title="Unable to load audit logs" description={logsQuery.error} />
+              <EmptyState
+                title="Unable to load audit logs"
+                description={logsQuery.error}
+              />
             ) : logs.length === 0 ? (
-              <EmptyState title="No audit entries found" description="Change the search or filter settings to surface activity." />
+              <EmptyState
+                title="No audit entries found"
+                description="Change the search or filter settings to surface activity."
+              />
             ) : (
               <Table>
                 <TableHeader>
@@ -85,11 +98,21 @@ export const AuditLogsPageClient = () => {
                     <TableRow key={log.id}>
                       <TableCell>
                         <p className="font-semibold text-slate-900">{log.message}</p>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">{log.action}</p>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                          {log.action}
+                        </p>
                       </TableCell>
                       <TableCell>{log.entityType}</TableCell>
                       <TableCell>
-                        <Badge variant={log.level === "error" ? "destructive" : log.level === "warn" ? "secondary" : "muted"}>
+                        <Badge
+                          variant={
+                            log.level === "error"
+                              ? "destructive"
+                              : log.level === "warn"
+                                ? "secondary"
+                                : "muted"
+                          }
+                        >
                           {log.level}
                         </Badge>
                       </TableCell>
@@ -101,10 +124,13 @@ export const AuditLogsPageClient = () => {
             )
           }
           pagination={
-            <PaginationControls meta={logsMeta} onPageChange={(nextPage) => setPage(nextPage)} />
+            <PaginationControls
+              meta={logsMeta}
+              onPageChange={(nextPage) => setPage(nextPage)}
+            />
           }
         />
-      )
+      )}
     </PermissionGuard>
   );
 };
