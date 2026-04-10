@@ -276,7 +276,7 @@ export const RolesPageClient = () => {
                   }
                 }}
               >
-                <FormField label="Role name" error={fieldErrors.name}>
+                <FormField label="Role name">
                   <Input
                     placeholder="Role name"
                     value={form.name}
@@ -298,7 +298,7 @@ export const RolesPageClient = () => {
                   />
                   <FieldError message={fieldErrors.name} />
                 </FormField>
-                <FormField label="Role slug" hint="Lowercase letters, numbers, and hyphens only." error={fieldErrors.slug}>
+                <FormField label="Role slug" hint="Lowercase letters, numbers, and hyphens only.">
                   <Input
                     placeholder="role-slug"
                     value={form.slug}

@@ -128,7 +128,7 @@ export const ProfilePageClient = () => {
                   }
                 }}
               >
-                <FormField label="Full name" error={fieldErrors.name}>
+                <FormField label="Full name">
                   <Input
                     placeholder="Full name"
                     value={form.name}
@@ -150,7 +150,7 @@ export const ProfilePageClient = () => {
                   />
                   <FieldError message={fieldErrors.name} />
                 </FormField>
-                <FormField label="Email address" error={fieldErrors.email}>
+                <FormField label="Email address">
                   <Input
                     type="email"
                     placeholder="Email address"

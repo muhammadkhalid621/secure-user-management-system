@@ -3,9 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "next dev -p 8001",
+    "dev": "next dev -p 6001",
     "build": "next build",
-    "start": "next start -p 8001",
+    "start": "next start -p 6001",
     "lint": "tsc --noEmit -p tsconfig.lint.json",
     "test": "vitest run --coverage",
     "test:watch": "vitest",

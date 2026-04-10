@@ -86,7 +86,7 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
             }}
           >
             {isRegister ? (
-              <FormField label="Full name" error={errors.name}>
+              <FormField label="Full name">
                 <Input
                   placeholder="Full name"
                   value={name}
@@ -109,7 +109,7 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
                 <FieldError message={errors.name} />
               </FormField>
             ) : null}
-            <FormField label="Email address" error={errors.email}>
+            <FormField label="Email address">
               <Input
                 type="email"
                 placeholder="Email address"
@@ -128,7 +128,7 @@ export const AuthForm = ({ mode }: { mode: "login" | "register" }) => {
               />
               <FieldError message={errors.email} />
             </FormField>
-            <FormField label="Password" error={errors.password}>
+            <FormField label="Password">
               <Input
                 type="password"
                 placeholder="Password"
