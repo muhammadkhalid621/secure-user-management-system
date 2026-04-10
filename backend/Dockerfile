@@ -8,7 +8,6 @@ RUN npm ci
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/backend/node_modules ./backend/node_modules
 COPY package.json package-lock.json ./
 COPY backend ./backend
 RUN npm run build --workspace backend
@@ -19,7 +18,6 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/package.json
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/backend/node_modules ./backend/node_modules
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/backend/config ./backend/config
 COPY --from=builder /app/backend/database ./backend/database

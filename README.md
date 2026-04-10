@@ -119,7 +119,7 @@ npm run dev:frontend
 - Backend API: `http://localhost:8000/api`
 - Swagger: `http://localhost:8000/docs`
 - Swagger JSON: `http://localhost:8000/docs.json`
-- MySQL: `127.0.0.1:3306`
+- MySQL: `127.0.0.1:3307` when using Docker Compose
 - Redis: `127.0.0.1:6379`
 
 ## Seeded Admin
