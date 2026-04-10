@@ -1,7 +1,7 @@
 "use client";
 
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { fetchJson } from "@/lib/api";
+import { fetchJson, FrontendApiError } from "@/lib/api";
 import type { ApiSuccessResponse, AuthPayload, SessionPayload, SafeUser } from "@/lib/types";
 
 type AuthState = {
@@ -27,6 +27,10 @@ export const bootstrapSession = createAsyncThunk(
       const response = await fetchJson<ApiSuccessResponse<SessionPayload>>("/api/auth/session");
       return response.data;
     } catch (error) {
+      if (error instanceof FrontendApiError && error.status === 401) {
+        return null;
+      }
+
       return rejectWithValue(error instanceof Error ? error.message : "Unable to restore session");
     }
   }
@@ -100,9 +104,9 @@ const authSlice = createSlice({
         state.status = "loading";
       })
       .addCase(bootstrapSession.fulfilled, (state, action) => {
-        state.user = action.payload.user;
-        state.socketToken = action.payload.socketToken;
-        state.status = "authenticated";
+        state.user = action.payload?.user ?? null;
+        state.socketToken = action.payload?.socketToken ?? null;
+        state.status = action.payload ? "authenticated" : "unauthenticated";
         state.initialized = true;
         state.error = null;
       })

@@ -60,3 +60,25 @@
     @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
   }
 }
+
+.app-toast-container {
+  width: min(24rem, calc(100vw - 1rem));
+  padding: 0.5rem;
+}
+
+.app-toast {
+  margin-bottom: 0.75rem;
+}
+
+.app-toast-body > div {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .app-toast-container {
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+  }
+}
