@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Op } from "sequelize";
+import { Op, type Transaction } from "sequelize";
 import { PermissionModel } from "../../database/models/permission.model.js";
 import { RoleModel } from "../../database/models/role.model.js";
 import { UserModel } from "../../database/models/user.model.js";
@@ -115,7 +115,7 @@ class UserRepository {
     email: string;
     passwordHash: string;
     roleIds?: string[];
-  }): Promise<User> {
+  }, transaction?: Transaction): Promise<User> {
     return createWithRelations({
       create: () =>
         UserModel.create({
@@ -123,12 +123,13 @@ class UserRepository {
           name: input.name,
           email: input.email,
           passwordHash: input.passwordHash
-        }),
+        }, { transaction }),
       findByPk: (userId, options) => UserModel.findByPk(userId, options),
       include: userInclude,
       relationSetterName: "setRoles",
       relationIds: input.roleIds,
-      map: mapUser
+      map: mapUser,
+      transaction
     });
   }
 
@@ -138,9 +139,10 @@ class UserRepository {
       name?: string;
       email?: string;
       roleIds?: string[];
-    }
+    },
+    transaction?: Transaction
   ): Promise<User | undefined> {
-    const current = await UserModel.findByPk(id, { include: userInclude });
+    const current = await UserModel.findByPk(id, { include: userInclude, transaction });
 
     if (!current) {
       return undefined;
@@ -156,16 +158,18 @@ class UserRepository {
       },
       relationSetterName: "setRoles",
       relationIds: input.roleIds,
-      map: mapUser
+      map: mapUser,
+      transaction
     });
   }
 
-  async delete(id: string): Promise<User | undefined> {
+  async delete(id: string, transaction?: Transaction): Promise<User | undefined> {
     return deleteAndReturn({
       id,
       findByPk: (userId, options) => UserModel.findByPk(userId, options),
       include: userInclude,
-      map: mapUser
+      map: mapUser,
+      transaction
     });
   }
 }

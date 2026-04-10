@@ -1,3 +1,4 @@
+import type { Transaction } from "sequelize";
 import { auditLogService } from "../audit-logs/audit-log.service.js";
 import { notificationService } from "../notifications/notification.service.js";
 
@@ -17,20 +18,38 @@ export class EntitySideEffectsService<TEntity extends { id: string }> {
     actorUserId?: string | null;
     entity: TEntity;
   }) {
+    await this.recordAudit(input);
+    await this.runAfterCommit(input);
+  }
+
+  async recordAudit(
+    input: {
+      action: MutationAction;
+      actorUserId?: string | null;
+      entity: TEntity;
+    },
+    transaction?: Transaction
+  ) {
+    await auditLogService.recordCrud({
+      actorUserId: input.actorUserId ?? null,
+      entityType: this.entityType,
+      entityId: input.entity.id,
+      action: input.action,
+      message: this.getMessage(input.action),
+      metadata: this.getMetadata(input.entity)
+    }, transaction);
+  }
+
+  async runAfterCommit(input: {
+    action: MutationAction;
+    actorUserId?: string | null;
+    entity: TEntity;
+  }) {
     if (this.invalidate) {
       await this.invalidate(input.entity);
     }
 
-    await Promise.all([
-      auditLogService.recordCrud({
-        actorUserId: input.actorUserId ?? null,
-        entityType: this.entityType,
-        entityId: input.entity.id,
-        action: input.action,
-        message: this.getMessage(input.action),
-        metadata: this.getMetadata(input.entity)
-      }),
-      notificationService.enqueue({
+    await notificationService.enqueue({
         event: `${this.entityType}.${input.action}`,
         message: this.getNotificationMessage(input.action),
         entityType: this.entityType,
@@ -39,7 +58,6 @@ export class EntitySideEffectsService<TEntity extends { id: string }> {
         payload: {
           [this.entityType]: input.entity
         }
-      })
-    ]);
+      });
   }
 }

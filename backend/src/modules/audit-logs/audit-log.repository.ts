@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { Op } from "sequelize";
+import { Op, type Transaction } from "sequelize";
 import { AuditLogModel } from "../../database/models/audit-log.model.js";
 import type { ListQuery } from "../../lib/list-query.js";
 import type { AuditLog, CreateAuditLogInput } from "./audit-log.types.js";
 
 class AuditLogRepository {
-  async create(input: CreateAuditLogInput): Promise<AuditLog> {
+  async create(input: CreateAuditLogInput, transaction?: Transaction): Promise<AuditLog> {
     const record = await AuditLogModel.create({
       id: randomUUID(),
       actorUserId: input.actorUserId ?? null,
@@ -15,7 +15,7 @@ class AuditLogRepository {
       level: input.level ?? "info",
       message: input.message,
       metadata: input.metadata ?? null
-    });
+    }, { transaction });
 
     return record.toJSON() as AuditLog;
   }

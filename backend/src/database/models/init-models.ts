@@ -1,6 +1,8 @@
+import { RolePermissionModel } from "./role-permission.model.js";
 import { PermissionModel } from "./permission.model.js";
 import { RoleModel } from "./role.model.js";
 import { UserModel } from "./user.model.js";
+import { UserRoleModel } from "./user-role.model.js";
 
 let initialized = false;
 
@@ -10,34 +12,34 @@ export const initModels = () => {
   }
 
   UserModel.belongsToMany(RoleModel, {
-    through: "user_roles",
+    through: UserRoleModel,
     as: "roles",
-    foreignKey: "user_id",
-    otherKey: "role_id",
+    foreignKey: "userId",
+    otherKey: "roleId",
     timestamps: true
   });
 
   RoleModel.belongsToMany(UserModel, {
-    through: "user_roles",
+    through: UserRoleModel,
     as: "users",
-    foreignKey: "role_id",
-    otherKey: "user_id",
+    foreignKey: "roleId",
+    otherKey: "userId",
     timestamps: true
   });
 
   RoleModel.belongsToMany(PermissionModel, {
-    through: "role_permissions",
+    through: RolePermissionModel,
     as: "permissions",
-    foreignKey: "role_id",
-    otherKey: "permission_id",
+    foreignKey: "roleId",
+    otherKey: "permissionId",
     timestamps: true
   });
 
   PermissionModel.belongsToMany(RoleModel, {
-    through: "role_permissions",
+    through: RolePermissionModel,
     as: "roles",
-    foreignKey: "permission_id",
-    otherKey: "role_id",
+    foreignKey: "permissionId",
+    otherKey: "roleId",
     timestamps: true
   });
 

@@ -6,6 +6,7 @@ import { findOrThrow } from "../../lib/find-or-throw.js";
 import { ROLES } from "../../constants/roles.js";
 import { buildListResult } from "../../lib/list-result.js";
 import type { ListQuery } from "../../lib/list-query.js";
+import { withTransaction } from "../../lib/db-transaction.js";
 import { hashPassword } from "../../lib/password.js";
 import { roleService } from "../roles/role.service.js";
 import { userRepository } from "./user.repository.js";
@@ -69,22 +70,32 @@ export class UserService {
       );
     }
 
-    const user = sanitizeUser(
-      await userRepository.create({
-        name: input.name,
-        email: input.email,
-        passwordHash: input.passwordHash,
-        roleIds: await this.resolveRoleIds(input.roleIds)
-      })
-    );
+    return withTransaction(async (transaction, onCommit) => {
+      const user = sanitizeUser(
+        await userRepository.create({
+          name: input.name,
+          email: input.email,
+          passwordHash: input.passwordHash,
+          roleIds: await this.resolveRoleIds(input.roleIds)
+        }, transaction)
+      );
 
-    await userSideEffectsService.onMutation({
-      action: "create",
-      actorUserId: input.actorUserId ?? null,
-      entity: user
+      await userSideEffectsService.recordAudit({
+        action: "create",
+        actorUserId: input.actorUserId ?? null,
+        entity: user
+      }, transaction);
+
+      onCommit(() =>
+        userSideEffectsService.runAfterCommit({
+          action: "create",
+          actorUserId: input.actorUserId ?? null,
+          entity: user
+        })
+      );
+
+      return user;
     });
-
-    return user;
   }
 
   async createFromInput(input: {
@@ -124,41 +135,61 @@ export class UserService {
       }
     }
 
-    const updated = findOrThrow({
-      value: await userRepository.update(id, input),
-      message: ERROR_MESSAGES.USERS.NOT_FOUND,
-      statusCode: HTTP_STATUS.NOT_FOUND,
-      code: ERROR_CODES.USER_NOT_FOUND
+    return withTransaction(async (transaction, onCommit) => {
+      const updated = findOrThrow({
+        value: await userRepository.update(id, input, transaction),
+        message: ERROR_MESSAGES.USERS.NOT_FOUND,
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        code: ERROR_CODES.USER_NOT_FOUND
+      });
+
+      const safeUser = sanitizeUser(updated);
+
+      await userSideEffectsService.recordAudit({
+        action: "update",
+        actorUserId: actorUserId ?? null,
+        entity: safeUser
+      }, transaction);
+
+      onCommit(() =>
+        userSideEffectsService.runAfterCommit({
+          action: "update",
+          actorUserId: actorUserId ?? null,
+          entity: safeUser
+        })
+      );
+
+      return safeUser;
     });
-
-    const safeUser = sanitizeUser(updated);
-
-    await userSideEffectsService.onMutation({
-      action: "update",
-      actorUserId: actorUserId ?? null,
-      entity: safeUser
-    });
-
-    return safeUser;
   }
 
   async delete(id: string, actorUserId?: string | null): Promise<SafeUser> {
-    const deleted = findOrThrow({
-      value: await userRepository.delete(id),
-      message: ERROR_MESSAGES.USERS.NOT_FOUND,
-      statusCode: HTTP_STATUS.NOT_FOUND,
-      code: ERROR_CODES.USER_NOT_FOUND
+    return withTransaction(async (transaction, onCommit) => {
+      const deleted = findOrThrow({
+        value: await userRepository.delete(id, transaction),
+        message: ERROR_MESSAGES.USERS.NOT_FOUND,
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        code: ERROR_CODES.USER_NOT_FOUND
+      });
+
+      const safeUser = sanitizeUser(deleted);
+
+      await userSideEffectsService.recordAudit({
+        action: "delete",
+        actorUserId: actorUserId ?? null,
+        entity: safeUser
+      }, transaction);
+
+      onCommit(() =>
+        userSideEffectsService.runAfterCommit({
+          action: "delete",
+          actorUserId: actorUserId ?? null,
+          entity: safeUser
+        })
+      );
+
+      return safeUser;
     });
-
-    const safeUser = sanitizeUser(deleted);
-
-    await userSideEffectsService.onMutation({
-      action: "delete",
-      actorUserId: actorUserId ?? null,
-      entity: safeUser
-    });
-
-    return safeUser;
   }
 }
 

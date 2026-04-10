@@ -5,6 +5,7 @@ import { ERROR_MESSAGES } from "../../constants/messages.js";
 import { findOrThrow } from "../../lib/find-or-throw.js";
 import { buildListResult } from "../../lib/list-result.js";
 import type { ListQuery } from "../../lib/list-query.js";
+import { withTransaction } from "../../lib/db-transaction.js";
 import { roleRepository } from "./role.repository.js";
 import { roleSideEffectsService } from "./role.side-effects.js";
 import type { Role } from "./role.types.js";
@@ -59,15 +60,25 @@ export class RoleService {
       );
     }
 
-    const role = await roleRepository.create(input);
+    return withTransaction(async (transaction, onCommit) => {
+      const role = await roleRepository.create(input, transaction);
 
-    await roleSideEffectsService.onMutation({
-      action: "create",
-      actorUserId: input.actorUserId ?? null,
-      entity: role
+      await roleSideEffectsService.recordAudit({
+        action: "create",
+        actorUserId: input.actorUserId ?? null,
+        entity: role
+      }, transaction);
+
+      onCommit(() =>
+        roleSideEffectsService.runAfterCommit({
+          action: "create",
+          actorUserId: input.actorUserId ?? null,
+          entity: role
+        })
+      );
+
+      return role;
     });
-
-    return role;
   }
 
   async update(
@@ -92,37 +103,57 @@ export class RoleService {
       }
     }
 
-    const role = findOrThrow({
-      value: await roleRepository.update(id, input),
-      message: ERROR_MESSAGES.ROLES.NOT_FOUND,
-      statusCode: HTTP_STATUS.NOT_FOUND,
-      code: ERROR_CODES.ROLE_NOT_FOUND
-    });
+    return withTransaction(async (transaction, onCommit) => {
+      const role = findOrThrow({
+        value: await roleRepository.update(id, input, transaction),
+        message: ERROR_MESSAGES.ROLES.NOT_FOUND,
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        code: ERROR_CODES.ROLE_NOT_FOUND
+      });
 
-    await roleSideEffectsService.onMutation({
-      action: "update",
-      actorUserId: actorUserId ?? null,
-      entity: role
-    });
+      await roleSideEffectsService.recordAudit({
+        action: "update",
+        actorUserId: actorUserId ?? null,
+        entity: role
+      }, transaction);
 
-    return role;
+      onCommit(() =>
+        roleSideEffectsService.runAfterCommit({
+          action: "update",
+          actorUserId: actorUserId ?? null,
+          entity: role
+        })
+      );
+
+      return role;
+    });
   }
 
   async delete(id: string, actorUserId?: string | null): Promise<Role> {
-    const role = findOrThrow({
-      value: await roleRepository.delete(id),
-      message: ERROR_MESSAGES.ROLES.NOT_FOUND,
-      statusCode: HTTP_STATUS.NOT_FOUND,
-      code: ERROR_CODES.ROLE_NOT_FOUND
-    });
+    return withTransaction(async (transaction, onCommit) => {
+      const role = findOrThrow({
+        value: await roleRepository.delete(id, transaction),
+        message: ERROR_MESSAGES.ROLES.NOT_FOUND,
+        statusCode: HTTP_STATUS.NOT_FOUND,
+        code: ERROR_CODES.ROLE_NOT_FOUND
+      });
 
-    await roleSideEffectsService.onMutation({
-      action: "delete",
-      actorUserId: actorUserId ?? null,
-      entity: role
-    });
+      await roleSideEffectsService.recordAudit({
+        action: "delete",
+        actorUserId: actorUserId ?? null,
+        entity: role
+      }, transaction);
 
-    return role;
+      onCommit(() =>
+        roleSideEffectsService.runAfterCommit({
+          action: "delete",
+          actorUserId: actorUserId ?? null,
+          entity: role
+        })
+      );
+
+      return role;
+    });
   }
 }
 

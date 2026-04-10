@@ -13,13 +13,16 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasAccessToken = Boolean(request.cookies.get(AUTH_COOKIE_NAMES.ACCESS_TOKEN)?.value);
   const hasRefreshToken = Boolean(request.cookies.get(AUTH_COOKIE_NAMES.REFRESH_TOKEN)?.value);
-  const isAuthenticated = hasAccessToken || hasRefreshToken;
+  const hasSessionHint = hasAccessToken || hasRefreshToken;
 
-  if (startsWithAny(pathname, PROTECTED_ROUTES) && !isAuthenticated) {
+  if (startsWithAny(pathname, PROTECTED_ROUTES) && !hasSessionHint) {
     return NextResponse.redirect(new URL(APP_ROUTES.LOGIN, request.url));
   }
 
-  if (startsWithAny(pathname, PUBLIC_ONLY_ROUTES) && isAuthenticated) {
+  // Only an active access token should bounce public auth pages immediately.
+  // A refresh-only cookie may be expired or otherwise invalid, and redirecting
+  // it to /dashboard can create a login <-> dashboard loop.
+  if (startsWithAny(pathname, PUBLIC_ONLY_ROUTES) && hasAccessToken) {
     return NextResponse.redirect(new URL(APP_ROUTES.DASHBOARD, request.url));
   }
 

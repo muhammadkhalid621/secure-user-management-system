@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Op } from "sequelize";
+import { Op, type Transaction } from "sequelize";
 import { PermissionModel } from "../../database/models/permission.model.js";
 import { RoleModel } from "../../database/models/role.model.js";
 import type { ListQuery } from "../../lib/list-query.js";
@@ -65,7 +65,7 @@ class RoleRepository {
     slug: string;
     description?: string;
     permissionIds: string[];
-  }): Promise<Role> {
+  }, transaction?: Transaction): Promise<Role> {
     return createWithRelations({
       create: () =>
         RoleModel.create({
@@ -73,12 +73,13 @@ class RoleRepository {
           name: input.name,
           slug: input.slug,
           description: input.description ?? null
-        }),
+        }, { transaction }),
       findByPk: (roleId, options) => RoleModel.findByPk(roleId, options),
       include: roleInclude,
       relationSetterName: "setPermissions",
       relationIds: input.permissionIds,
-      map: (role) => role.toJSON() as Role
+      map: (role) => role.toJSON() as Role,
+      transaction
     });
   }
 
@@ -89,9 +90,10 @@ class RoleRepository {
       slug?: string;
       description?: string | null;
       permissionIds?: string[];
-    }
+    },
+    transaction?: Transaction
   ): Promise<Role | undefined> {
-    const role = await RoleModel.findByPk(id, { include: roleInclude });
+    const role = await RoleModel.findByPk(id, { include: roleInclude, transaction });
 
     if (!role) {
       return undefined;
@@ -109,16 +111,18 @@ class RoleRepository {
       },
       relationSetterName: "setPermissions",
       relationIds: input.permissionIds,
-      map: (updatedRole) => updatedRole.toJSON() as Role
+      map: (updatedRole) => updatedRole.toJSON() as Role,
+      transaction
     });
   }
 
-  async delete(id: string): Promise<Role | undefined> {
+  async delete(id: string, transaction?: Transaction): Promise<Role | undefined> {
     return deleteAndReturn({
       id,
       findByPk: (roleId, options) => RoleModel.findByPk(roleId, options),
       include: roleInclude,
-      map: (role) => role.toJSON() as Role
+      map: (role) => role.toJSON() as Role,
+      transaction
     });
   }
 }
