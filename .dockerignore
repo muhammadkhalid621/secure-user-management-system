@@ -1,0 +1,16 @@
+node_modules
+backend/node_modules
+frontend/node_modules
+.git
+.github
+.next
+frontend/.next
+dist
+backend/dist
+coverage
+frontend/test-results
+frontend/playwright-report
+*.log
+.DS_Store
+backend/.env
+frontend/.env.local

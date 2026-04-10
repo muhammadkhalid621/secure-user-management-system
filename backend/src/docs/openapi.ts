@@ -10,13 +10,14 @@ export const openApiDocument = {
   },
   servers: [
     {
-      url: "http://localhost:4000",
+      url: "http://localhost:8000",
       description: "Local development server"
     }
   ],
   tags: [
     { name: "System" },
     { name: "Auth" },
+    { name: "Dashboard" },
     { name: "Audit Logs" },
     { name: "Users" },
     { name: "Roles" },
@@ -141,6 +142,39 @@ export const openApiDocument = {
           metadata: { type: "object", nullable: true },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" }
+        }
+      },
+      DashboardSummary: {
+        type: "object",
+        properties: {
+          userTotal: { type: "integer" },
+          roleTotal: { type: "integer" },
+          recentLogCount: { type: "integer" },
+          multiRoleUserCount: { type: "integer" },
+          permissionsMapped: { type: "integer" },
+          errorCount: { type: "integer" },
+          roleDistribution: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                label: { type: "string" },
+                value: { type: "integer" },
+                toneClassName: { type: "string" }
+              }
+            }
+          },
+          recentLevels: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                label: { type: "string" },
+                value: { type: "integer" },
+                toneClassName: { type: "string" }
+              }
+            }
+          }
         }
       },
       ErrorResponse: {
@@ -294,6 +328,29 @@ export const openApiDocument = {
                       items: { $ref: "#/components/schemas/AuditLog" }
                     },
                     meta: { $ref: "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard/summary": {
+      get: {
+        tags: ["Dashboard"],
+        summary: "Get dashboard summary metrics",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": {
+            description: "Dashboard summary",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    success: { type: "boolean" },
+                    data: { $ref: "#/components/schemas/DashboardSummary" }
                   }
                 }
               }

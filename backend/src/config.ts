@@ -12,10 +12,10 @@ const required = (value: string | undefined, key: string): string => {
 
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
-  port: Number(process.env.PORT ?? 4000),
+  port: Number(process.env.PORT ?? 8000),
   appName: process.env.APP_NAME ?? "Mini Secure User Management API",
   apiPrefix: process.env.API_PREFIX ?? "api",
-  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000",
+  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:8001",
   db: {
     host: process.env.DB_HOST ?? "127.0.0.1",
     port: Number(process.env.DB_PORT ?? 3306),
@@ -56,7 +56,7 @@ export const config = {
     )
   },
   socket: {
-    corsOrigin: process.env.SOCKET_CORS_ORIGIN ?? "http://localhost:3000",
+    corsOrigin: process.env.SOCKET_CORS_ORIGIN ?? "http://localhost:8001",
     notificationEvent:
       process.env.SOCKET_NOTIFICATION_EVENT ?? "notification",
     authRequired: process.env.SOCKET_AUTH_REQUIRED !== "false"

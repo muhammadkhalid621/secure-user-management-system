@@ -36,13 +36,16 @@ Production-style assignment project with a secure Express backend and a Next.js 
 - Redis-backed refresh token persistence / blacklist
 - Redis-backed cache helpers
 - BullMQ queue processing
+- Dockerfiles and Docker Compose app services
 - Swagger docs
 - Unit and route tests for backend
+- Backend integration tests with `supertest`
 - Frontend unit/integration tests
 - Playwright e2e setup
 - WebSocket auth with JWT
 - Pagination, search, sorting, and filtering
 - Audit logs collection/table and admin UI
+- CI workflow
 
 ## Repository Structure
 
@@ -82,11 +85,13 @@ Install dependencies:
 npm install
 ```
 
-Start MySQL and Redis:
+Start MySQL, Redis, and the optional containerized app services:
 
 ```bash
 npm run docker:up
 ```
+
+For local development, `npm run dev` is still the recommended workflow.
 
 Run migrations and seeders:
 
@@ -110,10 +115,10 @@ npm run dev:frontend
 
 ## Local URLs
 
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:4000/api`
-- Swagger: `http://localhost:4000/docs`
-- Swagger JSON: `http://localhost:4000/docs.json`
+- Frontend: `http://localhost:8001`
+- Backend API: `http://localhost:8000/api`
+- Swagger: `http://localhost:8000/docs`
+- Swagger JSON: `http://localhost:8000/docs.json`
 - MySQL: `127.0.0.1:3306`
 - Redis: `127.0.0.1:6379`
 
@@ -131,6 +136,10 @@ After running seeders, the default admin account is:
 - `npm run dev:frontend`
 - `npm run build`
 - `npm run lint`
+- `npm run test`
+- `npm run test:backend`
+- `npm run test:frontend`
+- `npm run test:e2e`
 - `npm run docker:up`
 - `npm run docker:down`
 - `npm run db:migrate`
@@ -198,6 +207,10 @@ Run that once before `npm run test:e2e --workspace frontend`, otherwise browser 
 
 - `GET /api/audit-logs`
 
+### Dashboard
+
+- `GET /api/dashboard/summary`
+
 ### Health / Docs
 
 - `GET /api/health`
@@ -226,6 +239,18 @@ Verified locally in this repository:
 - `npm run build --workspace frontend`
 
 Playwright e2e configuration is added, but browser binaries must be installed locally before execution.
+
+## CI
+
+A GitHub Actions workflow is included in [.github/workflows/ci.yml](/Applications/MAMP/htdocs/Muhammed-Khalid/test/.github/workflows/ci.yml).
+
+It runs:
+
+- install
+- backend lint + tests
+- frontend lint + tests + build
+- Playwright browser install
+- frontend e2e tests
 
 ## Submission Notes
 

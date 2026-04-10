@@ -10,7 +10,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { clearNotifications, pushNotification } from "@/store/notifications-slice";
 import type { NotificationPayload } from "@/lib/types";
 
-const socketUrl = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:4000";
+const socketUrl = process.env.NEXT_PUBLIC_WS_URL ?? "http://localhost:8000";
 
 export const RealtimeNotifications = () => {
   const dispatch = useAppDispatch();

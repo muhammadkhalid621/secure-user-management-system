@@ -2,6 +2,8 @@ node_modules
 .pnpm-store
 .turbo
 .next
+frontend/test-results
+frontend/playwright-report
 dist
 coverage
 .env
@@ -11,4 +13,3 @@ coverage
 !.env.local.example
 *.log
 .DS_Store
-

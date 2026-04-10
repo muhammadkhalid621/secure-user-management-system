@@ -22,6 +22,46 @@ services:
     volumes:
       - redis_data:/data
 
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: sums-api
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: mysql://sums_user:sums_password@mysql:3306/sums_db
+      CORS_ORIGIN: http://localhost:8001
+      WS_ORIGIN: http://localhost:8001
+      SOCKET_CORS_ORIGIN: http://localhost:8001
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "8000:8000"
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: sums-web
+    restart: unless-stopped
+    env_file:
+      - frontend/.env.local
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api
+      NEXT_SERVER_API_BASE_URL: http://api:8000/api
+      NEXT_PUBLIC_WS_URL: http://localhost:8000
+      NEXT_PUBLIC_APP_URL: http://localhost:8001
+    depends_on:
+      - api
+    ports:
+      - "8001:3000"
+
 volumes:
   mysql_data:
   redis_data:
