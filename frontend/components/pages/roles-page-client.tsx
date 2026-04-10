@@ -59,7 +59,7 @@ export const RolesPageClient = () => {
     () =>
       loadCollection<Role>("/api/roles", {
         page,
-        limit: 10,
+        limit: QUERY_DEFAULTS.LIMIT,
         search: search || undefined
       }),
     [page, search]
@@ -72,6 +72,7 @@ export const RolesPageClient = () => {
   const roles = rolesQuery.data?.rows ?? [];
   const rolesMeta = rolesQuery.data?.meta;
   const permissionCatalog = permissionsQuery.data?.rows ?? [];
+  const showInitialLoading = rolesQuery.isLoading && !rolesQuery.data;
 
   const resetForm = () => {
     setEditingRole(null);
@@ -84,7 +85,7 @@ export const RolesPageClient = () => {
   return (
     <PermissionGuard permission={PERMISSIONS.ROLES_READ}>
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        {rolesQuery.isLoading ? (
+        {showInitialLoading ? (
           <TableSkeleton columns={3} rows={5} includeFilters />
         ) : (
           <DataTableShell

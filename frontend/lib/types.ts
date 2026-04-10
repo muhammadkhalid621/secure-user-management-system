@@ -98,3 +98,22 @@ export type NotificationPayload = {
   payload: Record<string, unknown> | null;
   createdAt: string;
 };
+
+export type DashboardSummary = {
+  userTotal: number;
+  roleTotal: number;
+  recentLogCount: number;
+  multiRoleUserCount: number;
+  permissionsMapped: number;
+  errorCount: number;
+  roleDistribution: Array<{
+    label: string;
+    value: number;
+    toneClassName: string;
+  }>;
+  recentLevels: Array<{
+    label: string;
+    value: number;
+    toneClassName: string;
+  }>;
+};

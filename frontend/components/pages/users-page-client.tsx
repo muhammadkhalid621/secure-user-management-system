@@ -61,7 +61,7 @@ export const UsersPageClient = () => {
     () =>
       loadCollection<SafeUser>("/api/users", {
         page,
-        limit: 10,
+        limit: QUERY_DEFAULTS.LIMIT,
         search: search || undefined,
         role: roleFilter || undefined
       }),
@@ -76,6 +76,7 @@ export const UsersPageClient = () => {
   const users = usersQuery.data?.rows ?? [];
   const usersMeta = usersQuery.data?.meta;
   const roles = rolesQuery.data?.rows ?? [];
+  const showInitialLoading = usersQuery.isLoading && !usersQuery.data;
 
   const resetForm = () => {
     setEditingUser(null);
@@ -100,7 +101,7 @@ export const UsersPageClient = () => {
   return (
     <PermissionGuard permission={PERMISSIONS.USERS_READ}>
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        {usersQuery.isLoading ? (
+        {showInitialLoading ? (
           <TableSkeleton columns={4} rows={5} />
         ) : (
           <DataTableShell

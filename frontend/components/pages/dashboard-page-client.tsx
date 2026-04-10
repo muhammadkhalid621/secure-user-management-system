@@ -1,8 +1,8 @@
 "use client";
 
 import { Activity, Shield, Users } from "lucide-react";
-import { loadCollection } from "@/lib/client-crud";
-import type { AuditLog, Role, SafeUser } from "@/lib/types";
+import { fetchJson } from "@/lib/api";
+import type { ApiSuccessResponse, DashboardSummary } from "@/lib/types";
 import { useAsyncData } from "@/lib/query-hooks";
 import { RealtimeNotifications } from "@/components/realtime-notifications";
 import { BarChartCard } from "@/components/ui/bar-chart-card";
@@ -10,53 +10,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/ui/stat-card";
 
-const emptyStats = {
-  users: [] as SafeUser[],
-  roles: [] as Role[],
-  auditLogs: [] as AuditLog[]
+const emptyStats: DashboardSummary = {
+  userTotal: 0,
+  roleTotal: 0,
+  recentLogCount: 0,
+  multiRoleUserCount: 0,
+  permissionsMapped: 0,
+  errorCount: 0,
+  roleDistribution: [],
+  recentLevels: []
 };
 
 export const DashboardPageClient = () => {
   const statsQuery = useAsyncData(
-    async () => {
-      const [users, roles, auditLogs] = await Promise.all([
-        loadCollection<SafeUser>("/api/users", { limit: 100 }),
-        loadCollection<Role>("/api/roles", { limit: 100 }),
-        loadCollection<AuditLog>("/api/audit-logs", { limit: 5 })
-      ]);
-
-      return {
-        users: users.rows,
-        roles: roles.rows,
-        auditLogs: auditLogs.rows
-      };
-    },
+    async () =>
+      (await fetchJson<ApiSuccessResponse<DashboardSummary>>("/api/dashboard/summary")).data,
     []
   );
 
   const stats = statsQuery.data ?? emptyStats;
-  const roleDistribution = stats.roles.map((role) => ({
-    label: role.name,
-    value: stats.users.filter((user) => user.roles.some((userRole) => userRole.id === role.id)).length,
-    toneClassName: "bg-slate-900"
-  }));
-  const recentLevels = [
-    {
-      label: "Info",
-      value: stats.auditLogs.filter((item) => item.level === "info").length,
-      toneClassName: "bg-emerald-500"
-    },
-    {
-      label: "Warn",
-      value: stats.auditLogs.filter((item) => item.level === "warn").length,
-      toneClassName: "bg-amber-500"
-    },
-    {
-      label: "Error",
-      value: stats.auditLogs.filter((item) => item.level === "error").length,
-      toneClassName: "bg-red-500"
-    }
-  ];
 
   return (
     <div className="space-y-6">
@@ -92,24 +64,24 @@ export const DashboardPageClient = () => {
         <div className="grid gap-4 md:grid-cols-3">
           <StatCard
             label="Users"
-            value={stats.users.length}
+            value={stats.userTotal}
             detail="Accounts currently loaded into the admin workspace."
             icon={Users}
-            accent={`${stats.users.filter((user) => user.roles.length > 1).length} multi-role`}
+            accent={`${stats.multiRoleUserCount} multi-role`}
           />
           <StatCard
             label="Roles"
-            value={stats.roles.length}
+            value={stats.roleTotal}
             detail="Dynamic access groups controlling endpoint-level permissions."
             icon={Shield}
-            accent={`${stats.roles.reduce((sum, role) => sum + role.permissions.length, 0)} permissions mapped`}
+            accent={`${stats.permissionsMapped} permissions mapped`}
           />
           <StatCard
             label="Recent Logs"
-            value={stats.auditLogs.length}
+            value={stats.recentLogCount}
             detail="Latest operational events surfaced from the audit stream."
             icon={Activity}
-            accent={`${stats.auditLogs.filter((item) => item.level === "error").length} errors`}
+            accent={`${stats.errorCount} errors`}
           />
         </div>
       )}
@@ -126,12 +98,16 @@ export const DashboardPageClient = () => {
                 <BarChartCard
                   title="Role distribution"
                   description="Users mapped to each role in the current dataset."
-                  series={roleDistribution.length > 0 ? roleDistribution : [{ label: "No roles yet", value: 0 }]}
+                  series={
+                    stats.roleDistribution.length > 0
+                      ? stats.roleDistribution
+                      : [{ label: "No roles yet", value: 0 }]
+                  }
                 />
                 <BarChartCard
                   title="Recent log severity"
                   description="Severity breakdown from the latest audit entries."
-                  series={recentLevels}
+                  series={stats.recentLevels}
                 />
               </>
             )}

@@ -26,7 +26,7 @@ export const AuditLogsPageClient = () => {
     () =>
       loadCollection<AuditLog>("/api/audit-logs", {
         page,
-        limit: 20,
+        limit: QUERY_DEFAULTS.LIMIT,
         search: search || undefined,
         level: level || undefined
       }),
@@ -35,10 +35,11 @@ export const AuditLogsPageClient = () => {
 
   const logs = logsQuery.data?.rows ?? [];
   const logsMeta = logsQuery.data?.meta;
+  const showInitialLoading = logsQuery.isLoading && !logsQuery.data;
 
   return (
     <PermissionGuard permission={PERMISSIONS.AUDIT_LOGS_READ}>
-      {logsQuery.isLoading ? (
+      {showInitialLoading ? (
         <TableSkeleton columns={4} rows={6} />
       ) : (
         <DataTableShell
